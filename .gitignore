@@ -1,0 +1,7 @@
+# Project gitignore-file 
+*
+*.iml
+.settings
+.idea
+.classpath
+target
