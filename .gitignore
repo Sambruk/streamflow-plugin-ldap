@@ -1,5 +1,4 @@
 # Project gitignore-file 
-*
 *.iml
 .settings
 .idea

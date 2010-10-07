@@ -42,7 +42,8 @@ public interface LdapContactLookupPlugin
             clientResource.setChallengeResponse( ChallengeScheme.HTTP_BASIC, config.configuration().accountname().get(), config.configuration().password().get() );
 
             // Call plugin
-            setQueryParameters( clientResource.getReference(), contactTemplate );
+            // TODO
+            // setQueryParameters( clientResource.getReference(), contactTemplate );
             Representation result = clientResource.get( MediaType.APPLICATION_JSON );
 
             // Parse response

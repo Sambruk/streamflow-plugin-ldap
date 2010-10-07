@@ -3,10 +3,11 @@ package se.streamsource.streamflow.commercial.ldap.contact;
 import org.junit.Test;
 import org.qi4j.api.common.Visibility;
 import org.qi4j.api.injection.scope.Service;
-import org.qi4j.api.unitofwork.UnitOfWork;
 import org.qi4j.bootstrap.AssemblyException;
 import org.qi4j.bootstrap.ModuleAssembly;
 import org.qi4j.test.AbstractQi4jTest;
+import se.streamsource.streamflow.plugins.ldap.contact.LdapContactLookupPlugin;
+import se.streamsource.streamflow.plugins.ldap.contact.LdapContactLookupPluginConfiguration;
 import se.streamsource.streamflow.server.plugin.contact.ContactLookup;
 
 /**
@@ -31,7 +32,7 @@ public class LdapContactLookupPluginTest extends AbstractQi4jTest
    @Test
    public void testLookup()
    {
-      contactLookup.lookup( null );  
+      contactLookup.lookup( null );
    }
 
 }
