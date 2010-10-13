@@ -3,8 +3,8 @@ package se.streamsource.streamflow.plugins.ldap.authentication;
 import org.qi4j.api.configuration.Configuration;
 import org.qi4j.api.mixin.Mixins;
 import org.qi4j.api.service.ServiceComposite;
-import se.streamsource.streamflow.server.plugin.authentication.Authenticate;
-import se.streamsource.streamflow.server.plugin.authentication.UserValue;
+import se.streamsource.streamflow.server.plugin.authentication.Authenticator;
+import se.streamsource.streamflow.server.plugin.authentication.UserIdentityValue;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
@@ -18,21 +18,27 @@ import java.util.Hashtable;
 
 @Mixins(LdapAuthenticatePlugin.Mixin.class)
 public interface LdapAuthenticatePlugin
-      extends ServiceComposite, Authenticate, Configuration
+      extends ServiceComposite, Authenticator, Configuration
 {
-   class Mixin implements Authenticate
+
+
+   abstract class Mixin implements LdapAuthenticatePlugin
    {
 
-      public boolean authenticate( UserValue user )
+      public void authenticate( UserIdentityValue user )
       {
+
 
          Hashtable env = new Hashtable();
          env.put( Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory" );
          env.put( Context.PROVIDER_URL, "ldap://localhost:10389/" );
          env.put( Context.SECURITY_AUTHENTICATION, "simple" );
 
-         String uid = user.username().get();
-         String password = user.password().get();
+//         String uid = user.username().get();
+//         String password = user.password().get();
+
+         String uid = "henrikreinhold";
+         String password = "secret";
 
          DirContext ctx = null;
          try
@@ -70,7 +76,6 @@ public interface LdapAuthenticatePlugin
             // Perform a lookup in order to force a bind operation with JNDI
             ctx.lookup( dn );
             System.out.println( "Authentication successful" );
-            return true;
          } catch (NamingException e)
          {
             System.out.println( e.getMessage() );
@@ -84,7 +89,8 @@ public interface LdapAuthenticatePlugin
                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
             }
          }
-         return false;
       }
+
+
    }
 }
