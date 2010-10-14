@@ -3,6 +3,8 @@ package se.streamsource.streamflow.plugins.ldap.authentication;
 import org.qi4j.api.configuration.Configuration;
 import org.qi4j.api.mixin.Mixins;
 import org.qi4j.api.service.ServiceComposite;
+import org.restlet.data.Status;
+import org.restlet.resource.ResourceException;
 import se.streamsource.streamflow.server.plugin.authentication.Authenticator;
 import se.streamsource.streamflow.server.plugin.authentication.UserIdentityValue;
 
@@ -62,13 +64,13 @@ public interface LdapAuthenticatePlugin
             if (enm.hasMore())
             {
                // More than one user found
-               throw new IllegalStateException( "Not unique username" );
+               throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED, Authenticator.error.authentication_username_not_unique.toString() );
             }
 
             if (dn == null)
             {
                // uid not found
-               throw new IllegalArgumentException( "User not found" );
+               throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED, Authenticator.error.authentication_bad_username_password.toString() );
             }
 
             // Step 3: Bind with found DN and given password
@@ -78,7 +80,7 @@ public interface LdapAuthenticatePlugin
             ctx.lookup( dn );
          } catch (NamingException e)
          {
-            throw new IllegalAccessError( "Could not identify user" );
+            throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED, Authenticator.error.authentication_bad_username_password.toString() );
          } finally
          {
             try
