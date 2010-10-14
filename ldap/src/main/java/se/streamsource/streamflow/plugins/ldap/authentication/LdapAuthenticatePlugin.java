@@ -34,11 +34,8 @@ public interface LdapAuthenticatePlugin
          env.put( Context.PROVIDER_URL, "ldap://localhost:10389/" );
          env.put( Context.SECURITY_AUTHENTICATION, "simple" );
 
-//         String uid = user.username().get();
-//         String password = user.password().get();
-
-         String uid = "henrikreinhold";
-         String password = "secret";
+         String uid = user.username().get();
+         String password = user.password().get();
 
          DirContext ctx = null;
          try
@@ -47,7 +44,7 @@ public interface LdapAuthenticatePlugin
             ctx = new InitialDirContext( env );
 
             // Step 2: Search the directory
-            String base = "o=sevenSeas";
+            String base = "o=streamsource";
             String filter = "(&(objectClass=inetOrgPerson)(uid={0}))";
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope( SearchControls.SUBTREE_SCOPE );
