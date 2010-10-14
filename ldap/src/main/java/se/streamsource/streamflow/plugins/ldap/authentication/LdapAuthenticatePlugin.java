@@ -57,14 +57,18 @@ public interface LdapAuthenticatePlugin
             {
                SearchResult result = (SearchResult) enm.next();
                dn = result.getNameInNamespace();
-
-               System.out.println( "dn: " + dn );
             }
 
-            if (dn == null || enm.hasMore())
+            if (enm.hasMore())
             {
-               // uid not found or not unique
-               throw new NamingException( "Authentication failed" );
+               // More than one user found
+               throw new IllegalStateException( "Not unique username" );
+            }
+
+            if (dn == null)
+            {
+               // uid not found
+               throw new IllegalArgumentException( "User not found" );
             }
 
             // Step 3: Bind with found DN and given password
@@ -72,10 +76,9 @@ public interface LdapAuthenticatePlugin
             ctx.addToEnvironment( Context.SECURITY_CREDENTIALS, password );
             // Perform a lookup in order to force a bind operation with JNDI
             ctx.lookup( dn );
-            System.out.println( "Authentication successful" );
          } catch (NamingException e)
          {
-            System.out.println( e.getMessage() );
+            throw new IllegalAccessError( "Could not identify user" );
          } finally
          {
             try
@@ -83,7 +86,7 @@ public interface LdapAuthenticatePlugin
                ctx.close();
             } catch (NamingException e)
             {
-               e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+               //ignore
             }
          }
       }
