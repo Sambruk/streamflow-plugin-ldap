@@ -1,0 +1,57 @@
+version: 1
+
+dn: o=streamsource
+objectClass: organization
+objectClass: top
+o: streamsource
+description:: IFRoZSBjb250ZXh0IGVudHJ5IGZvciBzdWZmaXggbz1zdHJlYW1zb3VyY2U=
+
+dn: ou=people,o=streamsource
+objectClass: organizationalUnit
+objectClass: top
+ou: people
+
+dn: cn=Henrik Reinhold,ou=people,o=streamsource
+objectClass: organizationalPerson
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: top
+cn: Henrik Reinhold
+sn: Reinhold
+description: Developer Henrik Reinhold
+givenName: Henrik
+mail: henrik.reinhold@jayway.com
+uid: henrikreinhold
+userPassword:: e1NIQX1vSGF4SEN6R1BNM0pBOXZoZ3VIdXpEeTd3SlE9
+
+dn: ou=groups,o=streamsource
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+
+dn: cn=developers,ou=groups,o=streamsource
+objectClass: groupOfUniqueNames
+objectClass: top
+cn: developers
+uniqueMember: cn=Henrik Reinhold,ou=people,o=streamsource
+
+dn: cn=streamflow,ou=groups,o=streamsource
+objectClass: groupOfUniqueNames
+objectClass: top
+cn: streamflow
+uniqueMember: cn=Henrik Reinhold,ou=people,o=streamsource
+uniqueMember: cn=Arvid Huss,ou=people,o=streamsource
+
+dn: cn=Arvid Huss,ou=people,o=streamsource
+objectClass: organizationalPerson
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: top
+cn: Arvid Huss
+sn: Huss
+description: Developer Arvid Huss
+givenName: Arvid
+mail: arvid.huss@jayway.com
+uid: arvidhuss
+userPassword:: e1NIQX1vSGF4SEN6R1BNM0pBOXZoZ3VIdXpEeTd3SlE9
+
