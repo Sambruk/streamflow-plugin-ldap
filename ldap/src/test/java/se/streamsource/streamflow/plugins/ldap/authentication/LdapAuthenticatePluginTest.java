@@ -10,8 +10,10 @@ import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class LdapAuthenticatePluginTest
 {
 
