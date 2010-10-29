@@ -33,7 +33,7 @@ import se.streamsource.streamflow.util.Strings;
 
 @Mixins(LdapAuthenticatePlugin.Mixin.class)
 public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator, Activatable,
-      Configuration<LdapAuthenticatePluginConfiguration>
+      Configuration
 {
 
    abstract class Mixin implements LdapAuthenticatePlugin
@@ -53,7 +53,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       public void activate() throws Exception
       {
-         if (!"N/A".equals(config.configuration().name().get()))
+         if (LdapAuthenticatePluginConfiguration.Name.not_configured != config.configuration().name().get())
             checkConfig();
       }
 

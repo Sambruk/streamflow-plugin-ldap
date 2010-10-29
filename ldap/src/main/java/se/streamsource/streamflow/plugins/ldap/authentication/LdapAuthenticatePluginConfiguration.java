@@ -8,7 +8,7 @@ public interface LdapAuthenticatePluginConfiguration extends ConfigurationCompos
 {
 
    public enum Name {
-      ad, edirectory, apacheds
+      ad, edirectory, apacheds, not_configured
     }
    
    /**
