@@ -123,12 +123,12 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
                throw new ResourceException(Status.CLIENT_ERROR_UNAUTHORIZED);
             }
 
+            validateGroupMembership(ctx, dn);
+            
             ctx.addToEnvironment(Context.SECURITY_PRINCIPAL, dn);
             ctx.addToEnvironment(Context.SECURITY_CREDENTIALS, password);
             // Perform a lookup in order to force a bind operation with JNDI
             ctx.lookup(dn);
-
-            validateGroupMembership(ctx, dn);
 
             logger.debug("Authentication successful for user: " + dn);
 
@@ -157,13 +157,13 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
          {
          case ad:
             returningAttributes = new String[]
-            { "uniqueMember" };
-            filter = "(&(member={0})(objectClass=groupOfUniqueNames))";
+            { "member" };
+            filter = "(&(member={0})(objectClass=groupOfNames))";
             break;
          case edirectory:
             returningAttributes = new String[]
-            { "uniqueMember" };
-            filter = "(&(member={0})(objectClass=groupOfUniqueNames))";
+            { "member" };
+            filter = "(&(member={0})(objectClass=groupOfNames))";
             break;
          case apacheds:
             returningAttributes = new String[]
@@ -203,7 +203,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
          if (phoneAttribute != null)
          {
-            builder.prototype().phoneNumber().set((String) emailAttribute.get());
+            builder.prototype().phoneNumber().set((String) phoneAttribute.get());
          }
          
          builder.prototype().username().set(username);
@@ -216,7 +216,6 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
          switch (config.configuration().name().get())
          {
          case ad:
-            // Todo Modify this to enable AD search
             return "(&(objectclass=person)(uid={0}))";
          case edirectory:
             return "(&(objectClass=inetOrgPerson)(uid={0}))";
