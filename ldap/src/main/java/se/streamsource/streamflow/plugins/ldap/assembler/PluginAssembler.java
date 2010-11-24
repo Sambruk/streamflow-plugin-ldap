@@ -19,7 +19,7 @@ public class PluginAssembler
       module.addEntities( LdapAuthenticatePluginConfiguration.class ).visibleIn( Visibility.application );
 
       module.addServices( LdapAuthenticatePlugin.class ).
-            identifiedBy( "authentication" ).
+            identifiedBy( "ldapauthenticationplugin" ).
             visibleIn( Visibility.application ).
             instantiateOnStartup();
 
