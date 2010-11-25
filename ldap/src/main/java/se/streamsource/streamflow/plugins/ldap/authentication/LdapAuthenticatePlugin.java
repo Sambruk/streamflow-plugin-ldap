@@ -249,7 +249,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
             throw new ResourceException(Status.SERVER_ERROR_INTERNAL, ae);
          } catch (NamingException e)
          {
-            logger.warn("Problem establishing connection with ldap-server");
+            logger.warn("Problem establishing connection with ldap-server", e);
             throw new ResourceException(Status.SERVER_ERROR_INTERNAL, e);
          }
          return newContext;

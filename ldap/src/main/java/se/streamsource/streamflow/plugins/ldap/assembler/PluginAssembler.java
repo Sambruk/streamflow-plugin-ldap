@@ -5,6 +5,8 @@ import org.qi4j.bootstrap.Assembler;
 import org.qi4j.bootstrap.AssemblyException;
 import org.qi4j.bootstrap.ModuleAssembly;
 
+import se.streamsource.streamflow.infrastructure.configuration.FileConfiguration;
+import se.streamsource.streamflow.plugins.ldap.LoggingService;
 import se.streamsource.streamflow.plugins.ldap.authentication.LdapAuthenticatePlugin;
 import se.streamsource.streamflow.plugins.ldap.authentication.LdapAuthenticatePluginConfiguration;
 
@@ -23,6 +25,9 @@ public class PluginAssembler
             visibleIn( Visibility.application ).
             instantiateOnStartup();
 
+      module.addServices( FileConfiguration.class ).visibleIn( Visibility.application ).instantiateOnStartup();
+
+      module.addServices( LoggingService.class ).instantiateOnStartup();
    
    }
 }
