@@ -1,3 +1,10 @@
+/**
+ *
+ * Copyright 2010 Streamsource AB
+ *
+ * License statement goes here
+ */
+
 package se.streamsource.streamflow.plugins.ldap.authentication;
 
 import static org.junit.Assert.assertEquals;
