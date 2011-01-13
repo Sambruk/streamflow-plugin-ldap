@@ -1,0 +1,44 @@
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd
+http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 ">
+    <id>bin</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>target/maven-shared-archive-resources</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes>
+                <include>**/PluginLicense</include>
+                <include>**/NOTICE</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+    <files>
+        <file>
+            <source>target/streamflow-ldap-${project.version}.war</source>
+            <outputDirectory>plugin</outputDirectory>
+        </file>
+
+        <!--<file>
+            <source>src/main/resources/Streamflow_Surface_Release_Notes.pdf</source>
+            <outputDirectory>.</outputDirectory>
+        </file>
+        <file>
+            <source>src/main/resources/THIRDPARTY.pdf</source>
+            <outputDirectory>.</outputDirectory>
+        </file>
+        <file>
+            <source>src/main/resources/THIRDPARTYAPPENDIX.pdf</source>
+            <outputDirectory>.</outputDirectory>
+        </file>
+        <file>
+            <source>src/main/resources/README_LICENSE.txt</source>
+            <outputDirectory>.</outputDirectory>
+        </file>
+        -->
+    </files>
+</assembly>
