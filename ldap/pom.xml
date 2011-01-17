@@ -23,8 +23,8 @@
     </repositories>
 
     <scm>
-        <connection>scm:git:ssh://gerrit.jayway.com/projects/streamflow-plugin-eid.git</connection>
-        <developerConnection>scm:git:ssh://gerrit.jayway.com/projects/streamflow-plugin-eid.git</developerConnection>
+        <connection>scm:git:ssh://gerrit.jayway.com/projects/streamflow-plugin-ldap.git</connection>
+        <developerConnection>scm:git:ssh://gerrit.jayway.com/projects/streamflow-plugin-ldap.git</developerConnection>
     </scm>
 
     <developers>
