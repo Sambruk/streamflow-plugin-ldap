@@ -5,12 +5,12 @@
     <parent>
         <groupId>se.streamsource.streamflow.plugins</groupId>
         <artifactId>streamflow-ldap</artifactId>
-        <version>1.0</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
 
     <groupId>se.streamsource.streamflow.plugins</groupId>
     <artifactId>streamflow-ldap-dist</artifactId>
-    <version>1.0</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 

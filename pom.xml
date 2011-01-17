@@ -3,7 +3,7 @@
     <groupId>se.streamsource.streamflow.plugins</groupId>
     <artifactId>streamflow-ldap</artifactId>
     <name>Streamflow Ldap (Build POM)</name>
-    <version>1.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
