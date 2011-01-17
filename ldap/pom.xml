@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>streamflow-ldap</artifactId>
     <groupId>se.streamsource.streamflow.plugins</groupId>
-    <version>1.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>war</packaging>
     <name>Streamflow Ldap Plugin</name>
     <description>Streamflow Commercial Ldap plugin implementation</description>
