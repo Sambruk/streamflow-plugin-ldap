@@ -7,18 +7,6 @@
 
 package se.streamsource.streamflow.plugins.ldap.authentication;
 
-import java.util.Hashtable;
-
-import javax.naming.AuthenticationException;
-import javax.naming.Context;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
-import javax.naming.directory.SearchControls;
-import javax.naming.directory.SearchResult;
-
 import org.qi4j.api.configuration.Configuration;
 import org.qi4j.api.injection.scope.Structure;
 import org.qi4j.api.injection.scope.This;
@@ -31,12 +19,22 @@ import org.restlet.data.Status;
 import org.restlet.resource.ResourceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import se.streamsource.streamflow.plugins.ldap.authentication.LdapAuthenticatePluginConfiguration.Name;
 import se.streamsource.streamflow.server.plugin.authentication.Authenticator;
 import se.streamsource.streamflow.server.plugin.authentication.UserDetailsValue;
 import se.streamsource.streamflow.server.plugin.authentication.UserIdentityValue;
 import se.streamsource.streamflow.util.Strings;
+
+import javax.naming.AuthenticationException;
+import javax.naming.Context;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
+import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+import java.util.Hashtable;
 
 @Mixins(LdapAuthenticatePlugin.Mixin.class)
 public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator, Activatable,
