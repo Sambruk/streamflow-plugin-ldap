@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>se.streamsource.streamflow.plugins</groupId>
+        <artifactId>streamflow-ldap</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <groupId>se.streamsource.streamflow.plugins</groupId>
+    <artifactId>streamflow-ldap-dist</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <packaging>pom</packaging>
+
+    <name>Distribution</name>
+
+    <!-- NOTE: These dependency declarations are only required to sort this project to the
+         end of the line in the multimodule build.
+
+         Since we only include the child1 module in our assembly, we only need to ensure this
+         distribution project builds AFTER that one...
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>se.streamsource.streamflow.plugins</groupId>
+            <artifactId>streamflow-plugin-ldap</artifactId>
+            <version>${project.version}</version>
+            <type>war</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.mycila.maven-license-plugin</groupId>
+                <artifactId>maven-license-plugin</artifactId>
+                <configuration>
+                    <header>${basedir}/../src/main/resources/commercial_license_header.txt</header>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>distro-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assemble/dist-pkg.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
