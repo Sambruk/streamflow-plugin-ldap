@@ -12,7 +12,7 @@ http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 ">
             <directory>target/maven-shared-archive-resources</directory>
             <outputDirectory>.</outputDirectory>
             <includes>
-                <include>**/PluginLicense</include>
+                <include>**/STREAMSOURCE_LICENSE_1_0.pdf</include>
                 <include>**/NOTICE</include>
             </includes>
         </fileSet>

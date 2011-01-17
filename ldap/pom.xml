@@ -87,6 +87,13 @@
         <url>N/A</url>
     </organization>
 
+    <licenses>
+        <license>
+            <name>Streamsource License 1.0</name>
+            <url>/STREAMSOURCE_LICENSE_1_0.pdf</url>
+        </license>
+    </licenses>
+
     <build>
         <plugins>
             <plugin>
