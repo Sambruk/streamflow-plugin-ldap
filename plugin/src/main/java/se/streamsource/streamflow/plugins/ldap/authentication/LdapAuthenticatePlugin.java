@@ -7,6 +7,19 @@
 
 package se.streamsource.streamflow.plugins.ldap.authentication;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+
+import javax.naming.AuthenticationException;
+import javax.naming.NameNotFoundException;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+
 import org.qi4j.api.configuration.Configuration;
 import org.qi4j.api.injection.scope.Structure;
 import org.qi4j.api.injection.scope.This;
@@ -19,25 +32,18 @@ import org.restlet.data.Status;
 import org.restlet.resource.ResourceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.streamsource.streamflow.plugins.ldap.authentication.LdapAuthenticatePluginConfiguration.Name;
+
+import se.streamsource.streamflow.plugins.ldap.helper.AttributesMapper;
+import se.streamsource.streamflow.plugins.ldap.helper.LdapHelper;
+import se.streamsource.streamflow.plugins.ldap.helper.SearchResultMapper;
 import se.streamsource.streamflow.server.plugin.authentication.Authenticator;
+import se.streamsource.streamflow.server.plugin.authentication.UserDetailsList;
 import se.streamsource.streamflow.server.plugin.authentication.UserDetailsValue;
 import se.streamsource.streamflow.server.plugin.authentication.UserIdentityValue;
-import se.streamsource.streamflow.util.Strings;
-
-import javax.naming.AuthenticationException;
-import javax.naming.Context;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
-import javax.naming.directory.SearchControls;
-import javax.naming.directory.SearchResult;
-import java.util.Hashtable;
+import se.streamsource.streamflow.server.plugin.synchronization.UserSynchronizer;
 
 @Mixins(LdapAuthenticatePlugin.Mixin.class)
-public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator, Activatable,
+public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator, UserSynchronizer, Activatable,
       Configuration
 {
 
@@ -46,11 +52,15 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       private static final Logger logger = LoggerFactory.getLogger(LdapAuthenticatePlugin.class);
 
+      private static final String AUTHORIZED_USERS_GROUP = "streamflow";
+
       @Structure
       ValueBuilderFactory vbf;
 
       @This
       Configuration<LdapAuthenticatePluginConfiguration> config;
+
+      LdapHelper ldapHelper;
 
       public void passivate() throws Exception
       {
@@ -59,7 +69,59 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
       public void activate() throws Exception
       {
          if (LdapAuthenticatePluginConfiguration.Name.not_configured != config.configuration().name().get())
-            checkConfig();
+            ldapHelper = new LdapHelper(config);
+      }
+
+      public UserDetailsList allUsersInGroup(String groupName)
+      {
+         String filter = "(&(uniqueMember=*)(objectClass=groupOfUniqueNames))";
+
+         SearchControls controls = new SearchControls();
+         controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+         controls.setReturningAttributes(new String[]
+         { "uniqueMember" });
+         controls.setReturningObjFlag(true);
+
+         try
+         {
+            String groupDn = "cn=" + groupName + "," + config.configuration().groupSearchbase().get();
+            List<List<String>> names = ldapHelper.search(groupDn, filter, controls,
+                  new SearchResultMapper<List<String>>()
+                  {
+                     public List<String> mapFromSearchResult(SearchResult result) throws NamingException
+                     {
+                        List<String> listNames = new ArrayList<String>();
+
+                        @SuppressWarnings("unchecked")
+                        NamingEnumeration<String> allNames = (NamingEnumeration<String>) result.getAttributes()
+                              .get("uniqueMember").getAll();
+
+                        while (allNames.hasMore())
+                        {
+                           listNames.add(allNames.next());
+                        }
+                        return listNames;
+                     }
+                  });
+
+            UserDetailsList resultList = vbf.newValue(UserDetailsList.class);
+
+            for (String dn : names.get(0))
+            {
+               resultList.users().get().add(ldapHelper.lookup(dn, new UserDetailsValueAttributesMapper()));
+            }
+
+            return resultList;
+
+         } catch (NameNotFoundException nnfe)
+         {
+            logger.error("Could not found a group with that name in directory", nnfe);
+            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND);
+         } catch (NamingException ne)
+         {
+            logger.error("Couldn't read users from LDAP group", ne);
+            throw new ResourceException(Status.SERVER_ERROR_INTERNAL, ne);
+         }
       }
 
       public void authenticate(UserIdentityValue user)
@@ -69,71 +131,37 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       public UserDetailsValue userdetails(UserIdentityValue user)
       {
-         checkConfig();
-
-         String uid = user.username().get();
-         String password = user.password().get();
-
-         DirContext ctx = null;
          try
          {
-            ctx = createInitialContext();
-
-            return lookupUserDetails(ctx, uid, password);
-
-         } finally
-         {
-            try
-            {
-               if (ctx != null)
-                  ctx.close();
-            } catch (NamingException e)
-            {
-               logger.debug("Error closing context:", e);
-            }
-         }
-
-      }
-
-      private UserDetailsValue lookupUserDetails(DirContext ctx, String uid, String password)
-      {
-         try
-         {
+            String username = user.username().get();
+            String password = user.password().get();
 
             String filter = createFilterForUidQuery();
 
-            SearchControls ctls = new SearchControls();
-            ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-            ctls.setReturningAttributes(new String[]
-            { config.configuration().nameAttribute().get(), config.configuration().emailAttribute().get(),
-                  config.configuration().phoneAttribute().get() });
-            ctls.setReturningObjFlag(true);
+            SearchControls controls = new SearchControls();
+            controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            controls.setReturningObjFlag(true);
 
-            NamingEnumeration<SearchResult> enm = ctx.search(config.configuration().userSearchbase().get(), filter,
-                  new String[]
-                  { uid }, ctls);
-
-            UserDetailsValue userDetails = null;
-            String dn = null;
-
-            if (enm.hasMore())
+            List<String> names = ldapHelper.search(config.configuration().userSearchbase().get(), filter, new String[]
+            { username }, controls, new SearchResultMapper<String>()
             {
-               SearchResult result = (SearchResult) enm.next();
-               dn = result.getNameInNamespace();
-               userDetails = createUserDetails(result, uid);
-            }
+               public String mapFromSearchResult(SearchResult result) throws NamingException
+               {
+                  return result.getNameInNamespace();
+               }
+            });
 
-            if (dn == null || enm.hasMore())
+            if (names.isEmpty() || names.size() > 1)
             {
                throw new ResourceException(Status.CLIENT_ERROR_UNAUTHORIZED);
             }
 
-            validateGroupMembership(ctx, dn);
-            
-            ctx.addToEnvironment(Context.SECURITY_PRINCIPAL, dn);
-            ctx.addToEnvironment(Context.SECURITY_CREDENTIALS, password);
+            String dn = names.get(0);
+            validateGroupMembership(dn);
+
             // Perform a lookup in order to force a bind operation with JNDI
-            ctx.lookup(dn);
+            UserDetailsValue userDetails = ldapHelper.lookup(dn, username, password,
+                  new UserDetailsValueAttributesMapper());
 
             logger.debug("Authentication successful for user: " + dn);
 
@@ -149,9 +177,10 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
             logger.debug("Unknown error while authenticating user: ", e);
             throw new ResourceException(Status.SERVER_ERROR_INTERNAL, e);
          }
+
       }
 
-      private void validateGroupMembership(DirContext ctx, String dn) throws NamingException
+      private void validateGroupMembership(String dn) throws NamingException
       {
          SearchControls groupCtls = new SearchControls();
          groupCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
@@ -179,41 +208,22 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
          groupCtls.setReturningAttributes(returningAttributes);
          groupCtls.setReturningObjFlag(true);
-         NamingEnumeration<SearchResult> groups = ctx.search(config.configuration().groupSearchbase().get(), filter,
-               new String[]
-               { dn }, groupCtls);
-         if (!groups.hasMore())
+
+         String groupDn = "cn=" + AUTHORIZED_USERS_GROUP + "," + config.configuration().groupSearchbase().get();
+         List<String> groupNames = ldapHelper.search(groupDn, filter, new String[]
+         { dn }, groupCtls, new SearchResultMapper<String>()
+         {
+
+            public String mapFromSearchResult(SearchResult result)
+            {
+               return result.getNameInNamespace();
+            }
+         });
+
+         if (groupNames.isEmpty())
          {
             throw new ResourceException(Status.CLIENT_ERROR_UNAUTHORIZED);
          }
-      }
-
-      private UserDetailsValue createUserDetails(SearchResult result, String username) throws NamingException
-      {
-         ValueBuilder<UserDetailsValue> builder = vbf.newValueBuilder(UserDetailsValue.class);
-
-         Attribute nameAttribute = result.getAttributes().get(config.configuration().nameAttribute().get());
-         Attribute emailAttribute = result.getAttributes().get(config.configuration().emailAttribute().get());
-         Attribute phoneAttribute = result.getAttributes().get(config.configuration().phoneAttribute().get());
-
-         if (nameAttribute != null)
-         {
-            builder.prototype().name().set((String) nameAttribute.get());
-         }
-
-         if (emailAttribute != null)
-         {
-            builder.prototype().emailAddress().set((String) emailAttribute.get());
-         }
-
-         if (phoneAttribute != null)
-         {
-            builder.prototype().phoneNumber().set((String) phoneAttribute.get());
-         }
-         
-         builder.prototype().username().set(username);
-         
-         return builder.newInstance();
       }
 
       private String createFilterForUidQuery()
@@ -231,47 +241,34 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
          }
       }
 
-      private DirContext createInitialContext()
+      private final class UserDetailsValueAttributesMapper implements AttributesMapper<UserDetailsValue>
       {
-         Hashtable<String, String> env = new Hashtable<String, String>();
-         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-         env.put(Context.PROVIDER_URL, config.configuration().url().get());
-         env.put(Context.SECURITY_AUTHENTICATION, "simple");
-         if (!config.configuration().username().get().isEmpty())
+         public UserDetailsValue mapFromAttribute(Attributes attributes) throws NamingException
          {
-            env.put(Context.SECURITY_PRINCIPAL, config.configuration().username().get());
-            env.put(Context.SECURITY_CREDENTIALS, config.configuration().password().get());
-         }
+            ValueBuilder<UserDetailsValue> builder = vbf.newValueBuilder(UserDetailsValue.class);
 
-         DirContext newContext = null;
-         try
-         {
-            newContext = new InitialDirContext(env);
+            Attribute nameAttribute = attributes.get(config.configuration().nameAttribute().get());
+            Attribute emailAttribute = attributes.get(config.configuration().emailAttribute().get());
+            Attribute phoneAttribute = attributes.get(config.configuration().phoneAttribute().get());
 
-         } catch (AuthenticationException ae)
-         {
-            logger.warn("Could not log on ldap-server with service account");
-            throw new ResourceException(Status.SERVER_ERROR_INTERNAL, ae);
-         } catch (NamingException e)
-         {
-            logger.warn("Problem establishing connection with ldap-server", e);
-            throw new ResourceException(Status.SERVER_ERROR_INTERNAL, e);
-         }
-         return newContext;
-      }
+            if (nameAttribute != null)
+            {
+               builder.prototype().name().set((String) nameAttribute.get());
+            }
 
-      private void checkConfig()
-      {
-         Name name = config.configuration().name().get();
-         if ((LdapAuthenticatePluginConfiguration.Name.ad != name
-               && LdapAuthenticatePluginConfiguration.Name.edirectory != name && LdapAuthenticatePluginConfiguration.Name.apacheds != name)
-               || !Strings.notEmpty(config.configuration().nameAttribute().get())
-               || !Strings.notEmpty(config.configuration().phoneAttribute().get())
-               || !Strings.notEmpty(config.configuration().emailAttribute().get())
-               || !Strings.notEmpty(config.configuration().userSearchbase().get())
-               || !Strings.notEmpty(config.configuration().groupSearchbase().get()))
-         {
-            throw new IllegalStateException("Correct configuration is missing");
+            if (emailAttribute != null)
+            {
+               builder.prototype().emailAddress().set((String) emailAttribute.get());
+            }
+
+            if (phoneAttribute != null)
+            {
+               builder.prototype().phoneNumber().set((String) phoneAttribute.get());
+            }
+
+            builder.prototype().username().set((String) attributes.get("uid").get());
+
+            return builder.newInstance();
          }
       }
    }
