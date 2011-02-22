@@ -9,7 +9,6 @@ package se.streamsource.streamflow.plugins.ldap.authentication;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 import javax.naming.AuthenticationException;
 import javax.naming.NameNotFoundException;
@@ -37,6 +36,7 @@ import se.streamsource.streamflow.plugins.ldap.helper.AttributesMapper;
 import se.streamsource.streamflow.plugins.ldap.helper.LdapHelper;
 import se.streamsource.streamflow.plugins.ldap.helper.SearchResultMapper;
 import se.streamsource.streamflow.server.plugin.authentication.Authenticator;
+import se.streamsource.streamflow.server.plugin.authentication.GroupValue;
 import se.streamsource.streamflow.server.plugin.authentication.UserDetailsList;
 import se.streamsource.streamflow.server.plugin.authentication.UserDetailsValue;
 import se.streamsource.streamflow.server.plugin.authentication.UserIdentityValue;
@@ -72,7 +72,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
             ldapHelper = new LdapHelper(config);
       }
 
-      public UserDetailsList allUsersInGroup(String groupName)
+      public UserDetailsList allUsersInGroup(GroupValue groupValue)
       {
          String filter = "(&(uniqueMember=*)(objectClass=groupOfUniqueNames))";
 
@@ -84,7 +84,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
          try
          {
-            String groupDn = "cn=" + groupName + "," + config.configuration().groupSearchbase().get();
+            String groupDn = "cn=" + groupValue.name().get() + "," + config.configuration().groupSearchbase().get();
             List<List<String>> names = ldapHelper.search(groupDn, filter, controls,
                   new SearchResultMapper<List<String>>()
                   {
