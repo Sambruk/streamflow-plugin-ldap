@@ -74,6 +74,20 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       public UserDetailsList allUsersInGroup(GroupValue groupValue)
       {
+         switch (config.configuration().name().get())
+         {
+         case ad:
+            return allUsersInGroupAD(groupValue);
+         case edirectory:
+            return null;
+         case apacheds:
+            return allUsersInGroupApacheDs(groupValue);
+         }   
+         throw new IllegalStateException("Correct configuration is missing");
+      }
+      
+      public UserDetailsList allUsersInGroupApacheDs(GroupValue groupValue)
+      {
          String filter = "(&(uniqueMember=*)(objectClass=groupOfUniqueNames))";
 
          SearchControls controls = new SearchControls();
@@ -124,6 +138,58 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
          }
       }
 
+      public UserDetailsList allUsersInGroupAD(GroupValue groupValue)
+      {
+         String filter = "(&(uniqueMember=*)(objectClass=groupOfUniqueNames))";
+
+         SearchControls controls = new SearchControls();
+         controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+         controls.setReturningAttributes(new String[]
+         { "uniqueMember" });
+         controls.setReturningObjFlag(true);
+
+         try
+         {
+            String groupDn = "cn=" + groupValue.name().get() + "," + config.configuration().groupSearchbase().get();
+            List<List<String>> names = ldapHelper.search(groupDn, filter, controls,
+                  new SearchResultMapper<List<String>>()
+                  {
+                     public List<String> mapFromSearchResult(SearchResult result) throws NamingException
+                     {
+                        List<String> listNames = new ArrayList<String>();
+
+                        @SuppressWarnings("unchecked")
+                        NamingEnumeration<String> allNames = (NamingEnumeration<String>) result.getAttributes()
+                              .get("uniqueMember").getAll();
+
+                        while (allNames.hasMore())
+                        {
+                           listNames.add(allNames.next());
+                        }
+                        return listNames;
+                     }
+                  });
+
+            UserDetailsList resultList = vbf.newValue(UserDetailsList.class);
+
+            for (String dn : names.get(0))
+            {
+               resultList.users().get().add(ldapHelper.lookup(dn, new UserDetailsValueAttributesMapper()));
+            }
+
+            return resultList;
+
+         } catch (NameNotFoundException nnfe)
+         {
+            logger.error("Could not found a group with that name in directory", nnfe);
+            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND);
+         } catch (NamingException ne)
+         {
+            logger.error("Couldn't read users from LDAP group", ne);
+            throw new ResourceException(Status.SERVER_ERROR_INTERNAL, ne);
+         }
+      }
+      
       public void authenticate(UserIdentityValue user)
       {
          userdetails(user);
