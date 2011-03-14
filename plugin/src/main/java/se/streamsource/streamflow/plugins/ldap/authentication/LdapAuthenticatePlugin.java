@@ -265,11 +265,11 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
          Name name = config.configuration().name().get();
          if ((LdapAuthenticatePluginConfiguration.Name.ad != name
                && LdapAuthenticatePluginConfiguration.Name.edirectory != name && LdapAuthenticatePluginConfiguration.Name.apacheds != name)
-               || !Strings.notEmpty(config.configuration().nameAttribute().get())
-               || !Strings.notEmpty(config.configuration().phoneAttribute().get())
-               || !Strings.notEmpty(config.configuration().emailAttribute().get())
-               || !Strings.notEmpty(config.configuration().userSearchbase().get())
-               || !Strings.notEmpty(config.configuration().groupSearchbase().get()))
+               || Strings.empty(config.configuration().nameAttribute().get())
+               || Strings.empty(config.configuration().phoneAttribute().get())
+               || Strings.empty(config.configuration().emailAttribute().get())
+               || Strings.empty(config.configuration().userSearchbase().get())
+               || Strings.empty(config.configuration().groupSearchbase().get()))
          {
             throw new IllegalStateException("Correct configuration is missing");
          }
