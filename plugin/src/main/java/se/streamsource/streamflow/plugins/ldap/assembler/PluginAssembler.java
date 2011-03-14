@@ -24,16 +24,16 @@ public class PluginAssembler
 {
    public void assemble( ModuleAssembly module ) throws AssemblyException
    {
-      module.addEntities( LdapAuthenticatePluginConfiguration.class ).visibleIn( Visibility.application );
+      module.entities( LdapAuthenticatePluginConfiguration.class ).visibleIn( Visibility.application );
 
-      module.addServices( LdapAuthenticatePlugin.class ).
+      module.services( LdapAuthenticatePlugin.class ).
             identifiedBy( "ldapauthenticationplugin" ).
             visibleIn( Visibility.application ).
             instantiateOnStartup();
 
-      module.addServices( FileConfiguration.class ).visibleIn( Visibility.application ).instantiateOnStartup();
+      module.services( FileConfiguration.class ).visibleIn( Visibility.application ).instantiateOnStartup();
 
-      module.addServices( LoggingService.class ).instantiateOnStartup();
+      module.services( LoggingService.class ).instantiateOnStartup();
    
    }
 }
