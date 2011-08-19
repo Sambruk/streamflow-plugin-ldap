@@ -13,8 +13,8 @@ import org.qi4j.api.injection.scope.This;
 import org.qi4j.api.mixin.Mixins;
 import org.qi4j.api.service.Activatable;
 import org.qi4j.api.service.ServiceComposite;
+import org.qi4j.api.structure.Module;
 import org.qi4j.api.value.ValueBuilder;
-import org.qi4j.api.value.ValueBuilderFactory;
 import org.restlet.data.Status;
 import org.restlet.resource.ResourceException;
 import org.slf4j.Logger;
@@ -47,7 +47,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
       private static final Logger logger = LoggerFactory.getLogger(LdapAuthenticatePlugin.class);
 
       @Structure
-      ValueBuilderFactory vbf;
+      Module module;
 
       @This
       Configuration<LdapAuthenticatePluginConfiguration> config;
@@ -190,7 +190,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       private UserDetailsValue createUserDetails(SearchResult result, String username) throws NamingException
       {
-         ValueBuilder<UserDetailsValue> builder = vbf.newValueBuilder(UserDetailsValue.class);
+         ValueBuilder<UserDetailsValue> builder = module.valueBuilderFactory().newValueBuilder(UserDetailsValue.class);
 
          Attribute nameAttribute = result.getAttributes().get(config.configuration().nameAttribute().get());
          Attribute emailAttribute = result.getAttributes().get(config.configuration().emailAttribute().get());
