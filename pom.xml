@@ -253,6 +253,7 @@
                         <configuration>
                             <attached>false</attached>
                             <properties>
+                                <subproject>LDAP - Plugin</subproject>
                                 <product>${application.header}</product>
                                 <company>${project.organization.name}</company>
                             </properties>
@@ -262,7 +263,7 @@
                                 </resourceBundle>
                             </resourceBundles>
                             <supplementalModelArtifacts>
-                                <supplementalModelArtifact>se.streamsource.streamflow:dependency-resource-supplement:1.2
+                                <supplementalModelArtifact>se.streamsource.streamflow:dependency-resource-supplement:1.4
                                 </supplementalModelArtifact>
                             </supplementalModelArtifacts>
                             <supplementalModels>
