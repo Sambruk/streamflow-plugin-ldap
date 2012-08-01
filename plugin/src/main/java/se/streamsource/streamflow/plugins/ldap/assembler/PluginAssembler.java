@@ -26,6 +26,8 @@ public class PluginAssembler
    {
       module.entities( LdapAuthenticatePluginConfiguration.class ).visibleIn( Visibility.application );
 
+      module.forMixin( LdapAuthenticatePluginConfiguration.class ).declareDefaults().name().set( LdapAuthenticatePluginConfiguration.Name.not_configured.name() );
+
       module.services( LdapAuthenticatePlugin.class ).
             identifiedBy( "ldapauthenticationplugin" ).
             visibleIn( Visibility.application ).

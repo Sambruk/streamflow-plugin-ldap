@@ -58,7 +58,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       public void activate() throws Exception
       {
-         if (LdapAuthenticatePluginConfiguration.Name.not_configured != config.configuration().name().get())
+         if ( !LdapAuthenticatePluginConfiguration.Name.not_configured.name().equals(  config.configuration().name().get() ) )
             checkConfig();
       }
 
@@ -158,7 +158,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
          String[] returningAttributes = null;
          String filter = null;
-         switch (config.configuration().name().get())
+         switch (LdapAuthenticatePluginConfiguration.Name.valueOf( config.configuration().name().get() ) )
          {
          case ad:
             returningAttributes = new String[]
@@ -218,7 +218,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       private String createFilterForUidQuery()
       {
-         switch (config.configuration().name().get())
+         switch (LdapAuthenticatePluginConfiguration.Name.valueOf( config.configuration().name().get() ) )
          {
          case ad:
             return "(&(objectclass=person)(uid={0}))";
@@ -262,7 +262,7 @@ public interface LdapAuthenticatePlugin extends ServiceComposite, Authenticator,
 
       private void checkConfig()
       {
-         Name name = config.configuration().name().get();
+         Name name = LdapAuthenticatePluginConfiguration.Name.valueOf( config.configuration().name().get() );
          if ((LdapAuthenticatePluginConfiguration.Name.ad != name
                && LdapAuthenticatePluginConfiguration.Name.edirectory != name && LdapAuthenticatePluginConfiguration.Name.apacheds != name)
                || Strings.empty(config.configuration().nameAttribute().get())

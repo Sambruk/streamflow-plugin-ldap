@@ -15,14 +15,15 @@ public interface LdapAuthenticatePluginConfiguration extends ConfigurationCompos
 {
 
    public enum Name {
-      ad, edirectory, apacheds, not_configured
+      not_configured, ad, edirectory, apacheds
     }
    
    /**
     * Name of the server to use, currently supporting 'ad' (Active Directory) and 'edirectory' (Novell eDirectory)
     * @return
     */
-   Property<LdapAuthenticatePluginConfiguration.Name> name();
+   @UseDefaults
+   Property<String> name();
    
    /**
     * The URL to the Ldap server
