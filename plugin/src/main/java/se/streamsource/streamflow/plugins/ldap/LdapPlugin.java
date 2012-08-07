@@ -327,7 +327,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          return builder.newInstance();
       }
 
-      public GroupListValue importgroups()
+      public GroupListValue groups()
       {
          ValueBuilder<GroupListValue> listBuilder = module.valueBuilderFactory().newValueBuilder( GroupListValue.class );
          try
@@ -385,7 +385,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          return listBuilder.newInstance();
       }
 
-      public UserListValue importusers()
+      public UserListValue users()
       {
          ValueBuilder<UserListValue> listBuilder = module.valueBuilderFactory().newValueBuilder( UserListValue.class );
 

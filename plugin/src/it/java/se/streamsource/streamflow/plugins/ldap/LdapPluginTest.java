@@ -98,12 +98,12 @@ public class LdapPluginTest
 
    private String invokeAndTestImportGroups( int expectedStatus ) throws IOException
    {
-      return invokeAndTest( "http://localhost:8085/ldap/ldapimport/importgroups", null, null, expectedStatus );
+      return invokeAndTest( "http://localhost:8085/ldap/import/groups", null, null, expectedStatus );
    }
 
    private String invokeAndTestImportUsers( int expectedStatus ) throws IOException
    {
-      return invokeAndTest( "http://localhost:8085/ldap/ldapimport/importusers", null, null, expectedStatus );
+      return invokeAndTest( "http://localhost:8085/ldap/import/users", null, null, expectedStatus );
    }
 
    private String invokeAndTest(String url, String username, String password, int expectedStatus) throws IOException
