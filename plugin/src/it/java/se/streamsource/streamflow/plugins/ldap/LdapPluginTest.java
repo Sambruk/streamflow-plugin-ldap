@@ -1,11 +1,10 @@
 /**
  *
- * Copyright 2010 Streamsource AB
+ * Copyright 2009-2012 Jayway Products AB
  *
  * License statement goes here
  */
-
-package se.streamsource.streamflow.plugins.ldap.authentication;
+package se.streamsource.streamflow.plugins.ldap;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpException;
@@ -14,13 +13,14 @@ import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.junit.Ignore;
 import org.junit.Test;
+import se.streamsource.streamflow.util.Strings;
 
 import java.io.IOException;
 
 import static org.junit.Assert.*;
 
-@Ignore
-public class LdapAuthenticatePluginTest
+//@Ignore
+public class LdapPluginTest
 {
 
    @Test
@@ -28,7 +28,8 @@ public class LdapAuthenticatePluginTest
    {
       String result = invokeAndTestUserdetails("henrikreinhold", "henrik", 200);
       assertEquals(
-            "{\"emailAddress\":\"henrik.reinhold@jayway.com\",\"name\":\"Henrik R\",\"phoneNumber\":\"henrik.reinhold@jayway.com\",\"username\":\"henrikreinhold\"}",
+            /*"{\"emailAddress\":\"henrik.reinhold@jayway.com\",\"name\":\"Henrik R\",\"phoneNumber\":\"henrik.reinhold@jayway.com\",\"username\":\"henrikreinhold\"}",*/
+            "{\"emailAddress\":\"henrik.reinhold@jayway.com\",\"name\":\"Henrik\",\"phoneNumber\":\"\",\"username\":\"henrikreinhold\"}",
             result);
    }
 
@@ -60,13 +61,28 @@ public class LdapAuthenticatePluginTest
    }
 
    @Test
-   public void testUserExistsButNotMemberOfCorrectGroup() throws HttpException, IOException
+   @Ignore
+   public void testUserExistsButNotMemberOfCorrectGroup() throws IOException
    {
       String result = invokeAndTestUserdetails("arvidhuss", "henrik", 401);
       assertEquals("The request requires user authentication", result);
 
       result = invokeAndTestAuthentication("arvidhuss", "henrik", 401);
       assertEquals("The request requires user authentication", result);
+   }
+
+   @Test
+   public void testImportGroups() throws IOException
+   {
+      String result = invokeAndTestImportGroups( 200 );
+      //assertEquals( "", result );
+   }
+
+   @Test
+   public void testImportUsers() throws IOException
+   {
+      String result = invokeAndTestImportUsers( 200 );
+      //assertEquals( "", result );
    }
    
    private String invokeAndTestUserdetails(String username, String password, int expectedStatus) throws IOException
@@ -79,14 +95,28 @@ public class LdapAuthenticatePluginTest
       return invokeAndTest("http://localhost:8085/ldap/authentication", username, password, expectedStatus);
    }
 
+
+   private String invokeAndTestImportGroups( int expectedStatus ) throws IOException
+   {
+      return invokeAndTest( "http://localhost:8085/ldap/ldapimport/importgroups", null, null, expectedStatus );
+   }
+
+   private String invokeAndTestImportUsers( int expectedStatus ) throws IOException
+   {
+      return invokeAndTest( "http://localhost:8085/ldap/ldapimport/importusers", null, null, expectedStatus );
+   }
+
    private String invokeAndTest(String url, String username, String password, int expectedStatus) throws IOException
    {
       HttpClient client = new HttpClient();
 
-      client.getState().setCredentials(new AuthScope(null, -1), new UsernamePasswordCredentials(username, password));
       GetMethod get = new GetMethod(url);
 
-      get.setDoAuthentication(true);
+      if( !Strings.empty( username ))
+      {
+         client.getState().setCredentials(new AuthScope(null, -1), new UsernamePasswordCredentials(username, password));
+         get.setDoAuthentication(true);
+      }
 
       try
       {
@@ -100,4 +130,6 @@ public class LdapAuthenticatePluginTest
          get.releaseConnection();
       }
    }
+
+
 }

@@ -1,17 +1,16 @@
 /**
  *
- * Copyright 2010 Streamsource AB
+ * Copyright 2009-2012 Jayway Products AB
  *
  * License statement goes here
  */
-
-package se.streamsource.streamflow.plugins.ldap.authentication;
+package se.streamsource.streamflow.plugins.ldap;
 
 import org.qi4j.api.common.UseDefaults;
 import org.qi4j.api.configuration.ConfigurationComposite;
 import org.qi4j.api.property.Property;
 
-public interface LdapAuthenticatePluginConfiguration extends ConfigurationComposite
+public interface LdapPluginConfiguration extends ConfigurationComposite
 {
 
    public enum Name {

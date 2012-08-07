@@ -1,10 +1,9 @@
 /**
  *
- * Copyright 2010 Streamsource AB
+ * Copyright 2009-2012 Jayway Products AB
  *
  * License statement goes here
  */
-
 package se.streamsource.streamflow.plugins.ldap;
 
 import org.apache.log4j.DailyRollingFileAppender;

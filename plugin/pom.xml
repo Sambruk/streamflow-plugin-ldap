@@ -160,34 +160,6 @@
             <plugin>
                 <artifactId>maven-remote-resources-plugin</artifactId>
                 <version>1.1</version>
-                <executions>
-                    <execution>
-                        <id>process-remote-resources</id>
-                        <goals>
-                            <goal>process</goal>
-                        </goals>
-                        <configuration>
-                            <attached>false</attached>
-                            <properties>
-                                <product>${application.header}</product>
-                                <company>${project.organization.name}</company>
-                                <subproduct>Ldap Plugin</subproduct>
-                            </properties>
-                            <runOnlyAtExecutionRoot>false</runOnlyAtExecutionRoot>
-                            <resourceBundles>
-                                <resourceBundle>se.streamsource.streamflow:streamflow-jar-resource-bundle:1.2
-                                </resourceBundle>
-                            </resourceBundles>
-                            <supplementalModelArtifacts>
-                                <supplementalModelArtifact>se.streamsource.streamflow:dependency-resource-supplement:1.2
-                                </supplementalModelArtifact>
-                            </supplementalModelArtifacts>
-                            <supplementalModels>
-                                <supplementalModel>supplemental-models.xml</supplementalModel>
-                            </supplementalModels>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
         <resources>

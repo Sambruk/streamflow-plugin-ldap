@@ -1,10 +1,9 @@
 /**
  *
- * Copyright 2010 Streamsource AB
+ * Copyright 2009-2012 Jayway Products AB
  *
  * License statement goes here
  */
-
 package se.streamsource.streamflow.plugins.ldap.assembler;
 
 import org.qi4j.api.common.Visibility;
@@ -12,9 +11,9 @@ import org.qi4j.bootstrap.Assembler;
 import org.qi4j.bootstrap.AssemblyException;
 import org.qi4j.bootstrap.ModuleAssembly;
 import se.streamsource.streamflow.infrastructure.configuration.FileConfiguration;
+import se.streamsource.streamflow.plugins.ldap.LdapPlugin;
+import se.streamsource.streamflow.plugins.ldap.LdapPluginConfiguration;
 import se.streamsource.streamflow.plugins.ldap.LoggingService;
-import se.streamsource.streamflow.plugins.ldap.authentication.LdapAuthenticatePlugin;
-import se.streamsource.streamflow.plugins.ldap.authentication.LdapAuthenticatePluginConfiguration;
 
 /**
  * Register the Ldap plugin in the plugin application
@@ -24,12 +23,12 @@ public class PluginAssembler
 {
    public void assemble( ModuleAssembly module ) throws AssemblyException
    {
-      module.entities( LdapAuthenticatePluginConfiguration.class ).visibleIn( Visibility.application );
+      module.entities( LdapPluginConfiguration.class ).visibleIn( Visibility.application );
 
-      module.forMixin( LdapAuthenticatePluginConfiguration.class ).declareDefaults().name().set( LdapAuthenticatePluginConfiguration.Name.not_configured.name() );
+      module.forMixin( LdapPluginConfiguration.class ).declareDefaults().name().set( LdapPluginConfiguration.Name.not_configured.name() );
 
-      module.services( LdapAuthenticatePlugin.class ).
-            identifiedBy( "ldapauthenticationplugin" ).
+      module.services( LdapPlugin.class ).
+            identifiedBy( "ldapplugin" ).
             visibleIn( Visibility.application ).
             instantiateOnStartup();
 

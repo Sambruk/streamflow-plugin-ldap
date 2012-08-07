@@ -2,12 +2,11 @@
 <!--
 
 
-    Copyright 2010 Streamsource AB
+    Copyright 2009-2012 Jayway Products AB
 
     License statement goes here
 
 -->
-
 <web-app xmlns="http://java.sun.com/xml/ns/j2ee"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee
