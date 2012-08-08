@@ -11,7 +11,6 @@ import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.GetMethod;
-import org.junit.Ignore;
 import org.junit.Test;
 import se.streamsource.streamflow.util.Strings;
 
@@ -29,7 +28,7 @@ public class LdapPluginTest
       String result = invokeAndTestUserdetails("henrikreinhold", "henrik", 200);
       assertEquals(
             /*"{\"emailAddress\":\"henrik.reinhold@jayway.com\",\"name\":\"Henrik R\",\"phoneNumber\":\"henrik.reinhold@jayway.com\",\"username\":\"henrikreinhold\"}",*/
-            "{\"emailAddress\":\"henrik.reinhold@jayway.com\",\"name\":\"Henrik\",\"phoneNumber\":\"\",\"username\":\"henrikreinhold\"}",
+            "{\"emailAddress\":\"henrik.reinhold@jayway.com\",\"name\":\"Henrik Reinhold\",\"phoneNumber\":\"\",\"username\":\"henrikreinhold\"}",
             result);
    }
 
@@ -61,13 +60,12 @@ public class LdapPluginTest
    }
 
    @Test
-   @Ignore
    public void testUserExistsButNotMemberOfCorrectGroup() throws IOException
    {
-      String result = invokeAndTestUserdetails("arvidhuss", "henrik", 401);
+      String result = invokeAndTestUserdetails("miltonhauser", "miltonhauser", 401);
       assertEquals("The request requires user authentication", result);
 
-      result = invokeAndTestAuthentication("arvidhuss", "henrik", 401);
+      result = invokeAndTestAuthentication("miltonhauser", "miltonhauser", 401);
       assertEquals("The request requires user authentication", result);
    }
 

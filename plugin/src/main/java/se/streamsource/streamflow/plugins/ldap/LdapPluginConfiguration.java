@@ -13,16 +13,17 @@ import org.qi4j.api.property.Property;
 public interface LdapPluginConfiguration extends ConfigurationComposite
 {
 
-   public enum Name {
+   public enum Vendor
+   {
       not_configured, ad, edirectory, apacheds
     }
    
    /**
-    * Name of the server to use, currently supporting 'ad' (Active Directory) and 'edirectory' (Novell eDirectory)
+    * Vendor of the server to use, currently supporting 'ad' (Active Directory) and 'edirectory' (Novell eDirectory)
     * @return
     */
    @UseDefaults
-   Property<String> name();
+   Property<String> vendor();
    
    /**
     * The URL to the Ldap server
@@ -77,10 +78,23 @@ public interface LdapPluginConfiguration extends ConfigurationComposite
    Property<String> emailAttribute();
 
    /**
-    * The cn for the group membership search i.e. 'cn=streamflow,ou=groups,o=streamsource'
+    * The cn for the group membership search i.e. 'ou=groups,o=streamsource'
     * @return
     */
    @UseDefaults
    Property<String> groupSearchbase();
 
+   /**
+    * The distinguished name for streamflow group, i.e. 'cn=streawmflow,ou=groups,o=streamsource'
+    * @return
+    */
+   @UseDefaults
+   Property<String> streamflowGroupDn();
+
+   /**
+    * The common name of the streamflow group. i.e. streamflow
+    * @return
+    */
+   @UseDefaults
+   Property<String> streamflowGroupCn();
 }

@@ -25,7 +25,7 @@ public class PluginAssembler
    {
       module.entities( LdapPluginConfiguration.class ).visibleIn( Visibility.application );
 
-      module.forMixin( LdapPluginConfiguration.class ).declareDefaults().name().set( LdapPluginConfiguration.Name.not_configured.name() );
+      module.forMixin( LdapPluginConfiguration.class ).declareDefaults().vendor().set( LdapPluginConfiguration.Vendor.not_configured.name() );
 
       module.services( LdapPlugin.class ).
             identifiedBy( "ldapplugin" ).

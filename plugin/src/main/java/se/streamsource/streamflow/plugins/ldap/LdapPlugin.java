@@ -77,8 +77,8 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
       public void activate() throws Exception
       {
-         if ( !LdapPluginConfiguration.Name.not_configured.name()
-               .equals(  config.configuration().name().get() ) && checkConfigOk() )
+         if ( !LdapPluginConfiguration.Vendor.not_configured.name()
+               .equals(  config.configuration().vendor().get() ) && checkConfigOk() )
          {
             createInitialContext();
          }
@@ -128,14 +128,16 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
       protected boolean checkConfigOk()
       {
-         LdapPluginConfiguration.Name name = LdapPluginConfiguration.Name.valueOf( config.configuration().name().get() );
-         if ((LdapPluginConfiguration.Name.ad != name
-               && LdapPluginConfiguration.Name.edirectory != name && LdapPluginConfiguration.Name.apacheds != name)
+         LdapPluginConfiguration.Vendor vendor = LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() );
+         if ((LdapPluginConfiguration.Vendor.ad != vendor
+               && LdapPluginConfiguration.Vendor.edirectory != vendor && LdapPluginConfiguration.Vendor.apacheds != vendor)
                || Strings.empty( config.configuration().nameAttribute().get() )
                || Strings.empty(config.configuration().phoneAttribute().get())
                || Strings.empty(config.configuration().emailAttribute().get())
                || Strings.empty(config.configuration().userSearchbase().get())
-               || Strings.empty(config.configuration().groupSearchbase().get()))
+               || Strings.empty(config.configuration().groupSearchbase().get())
+               || Strings.empty(config.configuration().streamflowGroupCn().get())
+               || Strings.empty(config.configuration().streamflowGroupDn().get()))
          {
             return false;
          }
@@ -144,7 +146,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
       protected String createFilterForUidQuery()
       {
-         switch (LdapPluginConfiguration.Name.valueOf( config.configuration().name().get() ) )
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
          {
             case ad:
                return "(&(objectclass=person)(uid={0}))";
@@ -156,9 +158,9 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          }
       }
 
-      protected String createFilterForUidsQuery()
+      protected String createFilterForFetchUserWithDn()
       {
-         switch (LdapPluginConfiguration.Name.valueOf( config.configuration().name().get() ) )
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
          {
             case ad:
                return "(objectclass=person)";
@@ -170,9 +172,79 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          }
       }
 
-      protected String createFilterForGroupQuery()
+      protected String createFilterForFetchGroupWithDn()
       {
-         switch (LdapPluginConfiguration.Name.valueOf( config.configuration().name().get() ) )
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
+         {
+            case ad:
+               return "(objectclass=groupOfNames)";
+            case edirectory:
+               return "(objectClass=groupOfNames)";
+            case apacheds:
+               return "(objectClass=groupOfUniqueNames)";
+            default:
+               return null;
+         }
+      }
+
+      protected String memberAttribute()
+      {
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
+         {
+            case ad:
+            case edirectory:
+               return "member";
+            case apacheds:
+               return "uniqueMember";
+            default:
+               return null;
+         }
+      }
+
+
+      String uidAttribute()
+      {
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
+         {
+            case ad:
+            case edirectory:
+            case apacheds:
+               return "uid";
+            default:
+               return null;
+         }
+      }
+
+      String entryUUIDAttribute()
+      {
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
+         {
+            case ad:
+            case edirectory:
+            case apacheds:
+               return "entryUUID";
+            default:
+               return null;
+         }
+      }
+
+      protected String createFilterForGroupsQuery()
+      {
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
+         {
+            case ad:
+            case edirectory:
+               return "(&(objectClass=groupOfNames)(!(cn={0})))";
+            case apacheds:
+               return "(&(objectClass=groupOfUniqueNames)(!(cn={0})))";
+            default:
+               return null;
+         }
+      }
+
+      protected String createFilterForMemberOfGroupQuery()
+      {
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
          {
             case ad:
             case edirectory:
@@ -184,29 +256,16 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          }
       }
 
-      protected String createFilterForGroupsQuery()
-      {
-         switch (LdapPluginConfiguration.Name.valueOf( config.configuration().name().get() ) )
-         {
-            case ad:
-            case edirectory:
-               return "(objectClass=groupOfNames)";
-            case apacheds:
-               return "(objectClass=groupOfUniqueNames)";
-            default:
-               return null;
-         }
-      }
-
       protected String[] createReturnAttributesForGroupQuery()
       {
-         switch (LdapPluginConfiguration.Name.valueOf( config.configuration().name().get() ) )
+         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
          {
             case ad:
             case edirectory:
-               return new String[] { "member" };
+               return new String[] { memberAttribute() };
             case apacheds:
-               return new String[] { "cn", "uniqueMember", "entryUUID" };
+               return new String[] { config.configuration().nameAttribute().get(),
+                     memberAttribute(), entryUUIDAttribute() };
             default:
                return new String[0];
          }
@@ -215,7 +274,9 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
       protected String[] createReturnAttributesForUidQuery()
       {
          return new String[]
-               { "uid", "cn", config.configuration().nameAttribute().get(), config.configuration().emailAttribute().get(),
+               {uidAttribute(),
+                     config.configuration().nameAttribute().get(),
+                     config.configuration().emailAttribute().get(),
                      config.configuration().phoneAttribute().get() };
       }
 
@@ -271,6 +332,8 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
                throw new ResourceException(Status.CLIENT_ERROR_UNAUTHORIZED);
             }
 
+            validateGroupMembership(ctx, dn);
+
             ctx.addToEnvironment(Context.SECURITY_PRINCIPAL, dn);
             ctx.addToEnvironment(Context.SECURITY_CREDENTIALS, password);
             // Perform a lookup in order to force a bind operation with JNDI
@@ -292,6 +355,25 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          }
       }
 
+      private void validateGroupMembership(DirContext ctx, String dn) throws NamingException
+      {
+         SearchControls groupCtls = new SearchControls();
+         groupCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+         String[] returningAttributes = createReturnAttributesForGroupQuery();
+         String filter = createFilterForMemberOfGroupQuery();
+
+         groupCtls.setReturningAttributes(returningAttributes);
+         groupCtls.setReturningObjFlag(true);
+         NamingEnumeration<SearchResult> groups = ctx.search(config.configuration().streamflowGroupDn().get(), filter,
+               new String[]
+                     { dn }, groupCtls);
+         if (!groups.hasMore())
+         {
+            throw new ResourceException(Status.CLIENT_ERROR_UNAUTHORIZED);
+         }
+      }
+
       private UserDetailsValue createUserDetails(SearchResult result, String username) throws NamingException
       {
          ValueBuilder<UserDetailsValue> builder = module.valueBuilderFactory().newValueBuilder(UserDetailsValue.class);
@@ -299,7 +381,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          Attribute nameAttribute = result.getAttributes().get(config.configuration().nameAttribute().get());
          Attribute emailAttribute = result.getAttributes().get(config.configuration().emailAttribute().get());
          Attribute phoneAttribute = result.getAttributes().get(config.configuration().phoneAttribute().get());
-         Attribute uid  = result.getAttributes().get( "uid" );
+         Attribute uid  = result.getAttributes().get( uidAttribute() );
 
          if (nameAttribute != null)
          {
@@ -343,7 +425,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             groupCtls.setReturningAttributes(returningAttributes);
             groupCtls.setReturningObjFlag(true);
             NamingEnumeration<SearchResult> groups = ctx.search(config.configuration().groupSearchbase().get(), filter,
-                  new String[0], groupCtls);
+                  new String[]{ config.configuration().streamflowGroupCn().get() }, groupCtls);
 
             List<GroupDetailsValue> groupsList = new ArrayList<GroupDetailsValue>( );
             ValueBuilder<GroupDetailsValue> groupBuilder = module.valueBuilderFactory().newValueBuilder( GroupDetailsValue.class );
@@ -351,20 +433,20 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             {
                SearchResult searchResult = groups.next();
 
-               Attribute id = searchResult.getAttributes().get( "entryUUID" );
+               Attribute id = searchResult.getAttributes().get( entryUUIDAttribute() );
                groupBuilder.prototype().id().set( (String)id.get() );
 
-               Attribute name = searchResult.getAttributes().get( "cn" );
+               Attribute name = searchResult.getAttributes().get( config.configuration().nameAttribute().get() );
                groupBuilder.prototype().name().set( (String)name.get() );
 
                List<String> memberIds = new ArrayList<String>(  );
-               Attribute members = searchResult.getAttributes().get( "uniqueMember" );
+               Attribute members = searchResult.getAttributes().get( memberAttribute() );
                for( int i=0; i<members.size(); i++ )
                {
                   LdapName ldapName = new LdapName( (String)members.get( i ) );
                   for(Rdn rdn : ldapName.getRdns() )
                   {
-                     if("uid".equals( rdn.getType() ))
+                     if(uidAttribute().equals( rdn.getType() ))
                         memberIds.add(  (String)rdn.getValue() );
                   }
 
@@ -393,21 +475,25 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          {
             resetSecurityCredentials();
 
+            String filter = createFilterForFetchGroupWithDn();
+
             SearchControls userCtls = new SearchControls();
-            userCtls.setSearchScope( SearchControls.SUBTREE_SCOPE );
+            userCtls.setSearchScope( SearchControls.OBJECT_SCOPE);
 
-            String filter = createFilterForUidsQuery();
-
-            userCtls.setReturningAttributes( createReturnAttributesForUidQuery() );
+            userCtls.setReturningAttributes( createReturnAttributesForGroupQuery() );
             userCtls.setReturningObjFlag( true );
-            NamingEnumeration<SearchResult> users = ctx.search(config.configuration().userSearchbase().get(), filter,
-                  new String[0], userCtls);
+            NamingEnumeration<SearchResult> users = ctx.search( config.configuration().streamflowGroupDn().get(), filter,
+                  new String[]{}, userCtls);
 
             List<UserDetailsValue> userList = new ArrayList<UserDetailsValue>( );
             while( users.hasMore() )
             {
                SearchResult searchResult = users.next();
-               userList.add( createUserDetails( searchResult, null ) );
+               Attribute members = searchResult.getAttributes().get( memberAttribute() );
+               for( int i=0; i<members.size(); i++ )
+               {
+                  userList.add( fetchUserDetails( (String)members.get( i ) ) );
+               }
             }
 
          listBuilder.prototype().users().set( userList );
@@ -419,6 +505,32 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
       }
 
       return listBuilder.newInstance();
+      }
+
+      private UserDetailsValue fetchUserDetails( String dn )
+            throws NamingException
+      {
+
+         String filter = createFilterForFetchUserWithDn();
+
+         SearchControls ctls = new SearchControls();
+         ctls.setSearchScope(SearchControls.OBJECT_SCOPE);
+         ctls.setReturningAttributes( createReturnAttributesForUidQuery() );
+         ctls.setReturningObjFlag(true);
+
+         NamingEnumeration<SearchResult> enm = ctx.search( dn, filter,
+               new String[]
+                     { }, ctls);
+
+         UserDetailsValue userDetails = null;
+
+         if (enm.hasMore())
+         {
+            SearchResult result = enm.next();
+
+            userDetails = createUserDetails(result, null);
+         }
+         return userDetails;
       }
    }
 }
