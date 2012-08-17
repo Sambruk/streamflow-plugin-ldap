@@ -6,6 +6,7 @@
  */
 package se.streamsource.streamflow.plugins.ldap;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.qi4j.api.configuration.Configuration;
 import org.qi4j.api.injection.scope.Structure;
 import org.qi4j.api.injection.scope.This;
@@ -13,6 +14,8 @@ import org.qi4j.api.mixin.Mixins;
 import org.qi4j.api.service.Activatable;
 import org.qi4j.api.service.ServiceComposite;
 import org.qi4j.api.structure.Module;
+import org.qi4j.api.util.Function;
+import org.qi4j.api.util.Iterables;
 import org.qi4j.api.value.ValueBuilder;
 import org.restlet.data.Status;
 import org.restlet.resource.ResourceException;
@@ -23,12 +26,14 @@ import se.streamsource.streamflow.server.plugin.authentication.UserDetailsValue;
 import se.streamsource.streamflow.server.plugin.authentication.UserIdentityValue;
 import se.streamsource.streamflow.server.plugin.ldapimport.GroupDetailsValue;
 import se.streamsource.streamflow.server.plugin.ldapimport.GroupListValue;
+import se.streamsource.streamflow.server.plugin.ldapimport.GroupMemberDetailValue;
 import se.streamsource.streamflow.server.plugin.ldapimport.LdapImporter;
 import se.streamsource.streamflow.server.plugin.ldapimport.UserListValue;
 import se.streamsource.streamflow.util.Strings;
 
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
+import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -43,12 +48,8 @@ import java.util.Hashtable;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: arvidhuss
- * Date: 8/6/12
- * Time: 7:44 AM
- * To change this template use File | Settings | File Templates.
- */
+ * Ldap Plugin class for fetching and authenticating users and groups against an Ldap vendor.
+ * */
 @Mixins(LdapPlugin.Mixin.class)
 public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator, LdapImporter,
       Configuration
@@ -66,6 +67,8 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
       protected DirContext ctx;
 
+      private VendorSpecifics vendorSpecifics;
+
       public void passivate() throws Exception
       {
          if( ctx != null )
@@ -81,6 +84,20 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
                .equals(  config.configuration().vendor().get() ) && checkConfigOk() )
          {
             createInitialContext();
+            switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
+            {
+               case ad:
+                  vendorSpecifics = new MicrosoftActiveDirectorySpecifics();
+                  break;
+               case edirectory:
+                  vendorSpecifics = new NovellEdirectorySpecifics();
+                  break;
+               case apacheds:
+                  vendorSpecifics = new ApacheDsSpecifics();
+                  break;
+               default:
+                  vendorSpecifics = null;
+            }
          }
       }
 
@@ -135,149 +152,26 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
                || Strings.empty(config.configuration().phoneAttribute().get())
                || Strings.empty(config.configuration().emailAttribute().get())
                || Strings.empty(config.configuration().userSearchbase().get())
-               || Strings.empty(config.configuration().groupSearchbase().get())
-               || Strings.empty(config.configuration().streamflowGroupCn().get())
-               || Strings.empty(config.configuration().streamflowGroupDn().get()))
+               || Strings.empty(config.configuration().groupSearchbase().get()))
          {
             return false;
          }
          return true;
       }
 
-      protected String createFilterForUidQuery()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-               return "(&(objectclass=person)(uid={0}))";
-            case edirectory:
-            case apacheds:
-               return "(&(objectClass=inetOrgPerson)(uid={0}))";
-            default:
-               return null;
-         }
-      }
-
-      protected String createFilterForFetchUserWithDn()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-               return "(objectclass=person)";
-            case edirectory:
-            case apacheds:
-               return "(objectClass=inetOrgPerson)";
-            default:
-               return null;
-         }
-      }
-
-      protected String createFilterForFetchGroupWithDn()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-               return "(objectclass=groupOfNames)";
-            case edirectory:
-               return "(objectClass=groupOfNames)";
-            case apacheds:
-               return "(objectClass=groupOfUniqueNames)";
-            default:
-               return null;
-         }
-      }
-
-      protected String memberAttribute()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-            case edirectory:
-               return "member";
-            case apacheds:
-               return "uniqueMember";
-            default:
-               return null;
-         }
-      }
-
-
-      String uidAttribute()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-            case edirectory:
-            case apacheds:
-               return "uid";
-            default:
-               return null;
-         }
-      }
-
-      String entryUUIDAttribute()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-            case edirectory:
-            case apacheds:
-               return "entryUUID";
-            default:
-               return null;
-         }
-      }
-
-      protected String createFilterForGroupsQuery()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-            case edirectory:
-               return "(&(objectClass=groupOfNames)(!(cn={0})))";
-            case apacheds:
-               return "(&(objectClass=groupOfUniqueNames)(!(cn={0})))";
-            default:
-               return null;
-         }
-      }
-
-      protected String createFilterForMemberOfGroupQuery()
-      {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-            case edirectory:
-               return "(&(member={0})(objectClass=groupOfNames))";
-            case apacheds:
-               return "(&(uniqueMember={0})(objectClass=groupOfUniqueNames))";
-            default:
-               return null;
-         }
-      }
-
       protected String[] createReturnAttributesForGroupQuery()
       {
-         switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
-         {
-            case ad:
-            case edirectory:
-               return new String[] { memberAttribute() };
-            case apacheds:
-               return new String[] { config.configuration().nameAttribute().get(),
-                     memberAttribute(), entryUUIDAttribute() };
-            default:
-               return new String[0];
-         }
+         return new String[] { config.configuration().nameAttribute().get(),
+               vendorSpecifics.memberAttribute() };
       }
 
       protected String[] createReturnAttributesForUidQuery()
       {
          return new String[]
-               {uidAttribute(),
+               {vendorSpecifics.uidAttribute(),
                      config.configuration().nameAttribute().get(),
                      config.configuration().emailAttribute().get(),
-                     config.configuration().phoneAttribute().get() };
+                     config.configuration().phoneAttribute().get()};
       }
 
       public void authenticate(UserIdentityValue user)
@@ -306,7 +200,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          {
             resetSecurityCredentials();
 
-            String filter = createFilterForUidQuery();
+            String filter = vendorSpecifics.createFilterForUidQuery();
 
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
@@ -360,14 +254,14 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          SearchControls groupCtls = new SearchControls();
          groupCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-         String[] returningAttributes = createReturnAttributesForGroupQuery();
-         String filter = createFilterForMemberOfGroupQuery();
+         String[] returningAttributes = new String[] { vendorSpecifics.memberAttribute() };
+         String filter = vendorSpecifics.createFilterForUniqueMember();
 
          groupCtls.setReturningAttributes(returningAttributes);
          groupCtls.setReturningObjFlag(true);
-         NamingEnumeration<SearchResult> groups = ctx.search(config.configuration().streamflowGroupDn().get(), filter,
+         NamingEnumeration<SearchResult> groups = ctx.search( config.configuration().streamflowUsersDn().get(), filter,
                new String[]
-                     { dn }, groupCtls);
+                     {dn}, groupCtls );
          if (!groups.hasMore())
          {
             throw new ResourceException(Status.CLIENT_ERROR_UNAUTHORIZED);
@@ -381,7 +275,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          Attribute nameAttribute = result.getAttributes().get(config.configuration().nameAttribute().get());
          Attribute emailAttribute = result.getAttributes().get(config.configuration().emailAttribute().get());
          Attribute phoneAttribute = result.getAttributes().get(config.configuration().phoneAttribute().get());
-         Attribute uid  = result.getAttributes().get( uidAttribute() );
+         Attribute uid  = result.getAttributes().get( vendorSpecifics.uidAttribute() );
 
          if (nameAttribute != null)
          {
@@ -420,12 +314,12 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             groupCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
             String[] returningAttributes = createReturnAttributesForGroupQuery();
-            String filter = createFilterForGroupsQuery();
+            String filter = vendorSpecifics.createFilterForGroupOfNames();
 
             groupCtls.setReturningAttributes(returningAttributes);
             groupCtls.setReturningObjFlag(true);
             NamingEnumeration<SearchResult> groups = ctx.search(config.configuration().groupSearchbase().get(), filter,
-                  new String[]{ config.configuration().streamflowGroupCn().get() }, groupCtls);
+                  new String[]{ }, groupCtls);
 
             List<GroupDetailsValue> groupsList = new ArrayList<GroupDetailsValue>( );
             ValueBuilder<GroupDetailsValue> groupBuilder = module.valueBuilderFactory().newValueBuilder( GroupDetailsValue.class );
@@ -433,26 +327,59 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             {
                SearchResult searchResult = groups.next();
 
-               Attribute id = searchResult.getAttributes().get( entryUUIDAttribute() );
-               groupBuilder.prototype().id().set( (String)id.get() );
+               groupBuilder.prototype().id().set( searchResult.getNameInNamespace() );
 
                Attribute name = searchResult.getAttributes().get( config.configuration().nameAttribute().get() );
                groupBuilder.prototype().name().set( (String)name.get() );
 
-               List<String> memberIds = new ArrayList<String>(  );
-               Attribute members = searchResult.getAttributes().get( memberAttribute() );
-               for( int i=0; i<members.size(); i++ )
+               Attribute members = searchResult.getAttributes().get( vendorSpecifics.memberAttribute() );
+               List<String> membersDN = new ArrayList<String>(  );
+               for( int i=0; i < members.size(); i++ )
                {
-                  LdapName ldapName = new LdapName( (String)members.get( i ) );
-                  for(Rdn rdn : ldapName.getRdns() )
-                  {
-                     if(uidAttribute().equals( rdn.getType() ))
-                        memberIds.add(  (String)rdn.getValue() );
-                  }
-
+                  membersDN.add( (String)members.get( i ) );
                }
 
-               groupBuilder.prototype().members().set( memberIds );
+               Iterable<GroupMemberDetailValue> memberIterable = Iterables.map( new Function<String, GroupMemberDetailValue>()
+               {
+                  ValueBuilder<GroupMemberDetailValue> groupMemberBuilder = module.valueBuilderFactory().newValueBuilder( GroupMemberDetailValue.class );
+
+                  public GroupMemberDetailValue map( String dn )
+
+                  {
+                     GroupMemberDetailValue result = null;
+                     try
+                     {
+                        LdapName ldapName = new LdapName( dn );
+                        for(Rdn rdn : ldapName.getRdns() )
+                        {
+                           if(vendorSpecifics.uidAttribute().equals( rdn.getType() ))
+                           {
+                              groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.user );
+                              groupMemberBuilder.prototype().id().set( (String)rdn.getValue() );
+                              result = groupMemberBuilder.newInstance();
+                           }
+                        }
+                        if( result == null )
+                        {
+                           groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.group );
+                           groupMemberBuilder.prototype().id().set( dn );
+                           result = groupMemberBuilder.newInstance();
+                        }
+                     }catch( InvalidNameException ine )
+                     {
+                        logger.debug("Unknown error while importing groups: ", ine);
+                        throw new ResourceException(Status.SERVER_ERROR_INTERNAL, ine);
+                     }
+
+                     return result;
+                  }
+
+               }, membersDN );
+
+               List<GroupMemberDetailValue> memberList = new ArrayList<GroupMemberDetailValue>(  );
+               CollectionUtils.addAll(memberList, memberIterable.iterator());
+
+               groupBuilder.prototype().members().set( memberList );
                groupsList.add( groupBuilder.newInstance() );
             }
 
@@ -475,21 +402,21 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          {
             resetSecurityCredentials();
 
-            String filter = createFilterForFetchGroupWithDn();
+            String filter = vendorSpecifics.createFilterForGroupOfNames();
 
             SearchControls userCtls = new SearchControls();
             userCtls.setSearchScope( SearchControls.OBJECT_SCOPE);
 
             userCtls.setReturningAttributes( createReturnAttributesForGroupQuery() );
             userCtls.setReturningObjFlag( true );
-            NamingEnumeration<SearchResult> users = ctx.search( config.configuration().streamflowGroupDn().get(), filter,
+            NamingEnumeration<SearchResult> users = ctx.search( config.configuration().streamflowUsersDn().get(), filter,
                   new String[]{}, userCtls);
 
             List<UserDetailsValue> userList = new ArrayList<UserDetailsValue>( );
             while( users.hasMore() )
             {
                SearchResult searchResult = users.next();
-               Attribute members = searchResult.getAttributes().get( memberAttribute() );
+               Attribute members = searchResult.getAttributes().get( vendorSpecifics.memberAttribute() );
                for( int i=0; i<members.size(); i++ )
                {
                   userList.add( fetchUserDetails( (String)members.get( i ) ) );
@@ -511,7 +438,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             throws NamingException
       {
 
-         String filter = createFilterForFetchUserWithDn();
+         String filter = vendorSpecifics.createFilterForFetchUserWithDn();
 
          SearchControls ctls = new SearchControls();
          ctls.setSearchScope(SearchControls.OBJECT_SCOPE);
@@ -531,6 +458,121 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             userDetails = createUserDetails(result, null);
          }
          return userDetails;
+      }
+   }
+
+   class ApacheDsSpecifics implements VendorSpecifics
+   {
+      public String createFilterForUidQuery()
+      {
+         return "(&(objectClass=inetOrgPerson)(uid={0}))";
+      }
+
+      public String createFilterForFetchUserWithDn()
+      {
+         return "(objectClass=inetOrgPerson)";
+      }
+
+      public String createFilterForGroupOfNames()
+      {
+         return "(objectClass=groupOfUniqueNames)";
+      }
+
+      public String memberAttribute()
+      {
+         return "uniqueMember";
+      }
+
+      public String uidAttribute()
+      {
+         return "uid";
+      }
+
+      public String entryUUIDAttribute()
+      {
+         return "entryUUID";
+      }
+
+      public String createFilterForUniqueMember()
+      {
+         return "(uniqueMember={0})";
+      }
+   }
+
+   class NovellEdirectorySpecifics implements VendorSpecifics
+   {
+      public String createFilterForUidQuery()
+      {
+         return "(&(objectClass=inetOrgPerson)(uid={0}))";
+      }
+
+      public String createFilterForFetchUserWithDn()
+      {
+         return "(objectClass=inetOrgPerson)";
+      }
+
+      public String createFilterForGroupOfNames()
+      {
+         return "(objectClass=groupOfNames)";
+      }
+
+      public String memberAttribute()
+      {
+         return "member";
+      }
+
+      public String uidAttribute()
+      {
+         return "uid";
+      }
+
+      public String entryUUIDAttribute()
+      {
+         return "GUID";
+      }
+
+      public String createFilterForUniqueMember()
+      {
+         return "(member={0})";
+      }
+   }
+
+   class MicrosoftActiveDirectorySpecifics implements VendorSpecifics
+   {
+      public String createFilterForUidQuery()
+      {
+         return "(&(objectclass=person)(uid={0}))";
+      }
+
+      public String createFilterForFetchUserWithDn()
+      {
+         return "(objectclass=person)";
+      }
+
+      public String createFilterForGroupOfNames()
+      {
+         return "(objectclass=groupOfNames)";
+      }
+
+      public String memberAttribute()
+      {
+         return "member";
+      }
+
+
+      public String uidAttribute()
+      {
+         return "uid";
+      }
+
+      public String entryUUIDAttribute()
+      {
+         return "objectGUID";
+      }
+
+      public String createFilterForUniqueMember()
+      {
+         return "(member={0})";
       }
    }
 }

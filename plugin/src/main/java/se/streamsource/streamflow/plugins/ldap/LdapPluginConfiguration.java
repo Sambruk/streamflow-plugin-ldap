@@ -19,7 +19,7 @@ public interface LdapPluginConfiguration extends ConfigurationComposite
     }
    
    /**
-    * Vendor of the server to use, currently supporting 'ad' (Active Directory) and 'edirectory' (Novell eDirectory)
+    * Vendor of the server to use, currently supporting 'ad' (Active Directory) and 'edirectory' (Novell eDirectory), Apacheds
     * @return
     */
    @UseDefaults
@@ -50,7 +50,7 @@ public interface LdapPluginConfiguration extends ConfigurationComposite
    Property<String> password();
    
    /**
-    * The cn for the search for users i.e. 'o=streamsource'
+    * The cn for the search for users i.e. 'ou=your_user_dir, o=your_org'
     * @return
     */
    @UseDefaults
@@ -78,23 +78,17 @@ public interface LdapPluginConfiguration extends ConfigurationComposite
    Property<String> emailAttribute();
 
    /**
-    * The cn for the group membership search i.e. 'ou=groups,o=streamsource'
+    * The cn for the group membership search i.e. 'ou=groups,ou=streamflow,o=your_org'
     * @return
     */
    @UseDefaults
    Property<String> groupSearchbase();
 
    /**
-    * The distinguished name for streamflow group, i.e. 'cn=streawmflow,ou=groups,o=streamsource'
+    * The distinguished name for streamflow users group, i.e. 'cn=users,ou=streamflow,o=your_org'
     * @return
     */
    @UseDefaults
-   Property<String> streamflowGroupDn();
+   Property<String> streamflowUsersDn();
 
-   /**
-    * The common name of the streamflow group. i.e. streamflow
-    * @return
-    */
-   @UseDefaults
-   Property<String> streamflowGroupCn();
 }
