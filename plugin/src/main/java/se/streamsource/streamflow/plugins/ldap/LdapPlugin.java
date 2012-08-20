@@ -311,32 +311,38 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             resetSecurityCredentials();
 
             SearchControls groupCtls = new SearchControls();
-            groupCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            groupCtls.setSearchScope( SearchControls.SUBTREE_SCOPE );
 
             String[] returningAttributes = createReturnAttributesForGroupQuery();
             String filter = vendorSpecifics.createFilterForGroupOfNames();
 
-            groupCtls.setReturningAttributes(returningAttributes);
-            groupCtls.setReturningObjFlag(true);
-            NamingEnumeration<SearchResult> groups = ctx.search(config.configuration().groupSearchbase().get(), filter,
-                  new String[]{ }, groupCtls);
+            groupCtls.setReturningAttributes( returningAttributes );
+            groupCtls.setReturningObjFlag( true );
+            NamingEnumeration<SearchResult> groups = ctx.search( config.configuration().groupSearchbase().get(), filter,
+                  new String[]{}, groupCtls );
 
-            List<GroupDetailsValue> groupsList = new ArrayList<GroupDetailsValue>( );
+            List<GroupDetailsValue> groupsList = new ArrayList<GroupDetailsValue>();
             ValueBuilder<GroupDetailsValue> groupBuilder = module.valueBuilderFactory().newValueBuilder( GroupDetailsValue.class );
-            while( groups.hasMore() )
+            while (groups.hasMore())
             {
                SearchResult searchResult = groups.next();
 
                groupBuilder.prototype().id().set( searchResult.getNameInNamespace() );
 
                Attribute name = searchResult.getAttributes().get( config.configuration().nameAttribute().get() );
-               groupBuilder.prototype().name().set( (String)name.get() );
+               if (name == null)
+               {
+                  logger.error( "Seems attribute browsing is prohibited. Check user rights for user in config." );
+                  throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED );
+               }
+
+               groupBuilder.prototype().name().set( (String) name.get() );
 
                Attribute members = searchResult.getAttributes().get( vendorSpecifics.memberAttribute() );
-               List<String> membersDN = new ArrayList<String>(  );
-               for( int i=0; i < members.size(); i++ )
+               List<String> membersDN = new ArrayList<String>();
+               for (int i = 0; i < members.size(); i++)
                {
-                  membersDN.add( (String)members.get( i ) );
+                  membersDN.add( (String) members.get( i ) );
                }
 
                Iterable<GroupMemberDetailValue> memberIterable = Iterables.map( new Function<String, GroupMemberDetailValue>()
@@ -350,25 +356,25 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
                      try
                      {
                         LdapName ldapName = new LdapName( dn );
-                        for(Rdn rdn : ldapName.getRdns() )
+                        for (Rdn rdn : ldapName.getRdns())
                         {
-                           if(vendorSpecifics.uidAttribute().equals( rdn.getType() ))
+                           if (vendorSpecifics.uidAttribute().equals( rdn.getType() ))
                            {
                               groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.user );
-                              groupMemberBuilder.prototype().id().set( (String)rdn.getValue() );
+                              groupMemberBuilder.prototype().id().set( (String) rdn.getValue() );
                               result = groupMemberBuilder.newInstance();
                            }
                         }
-                        if( result == null )
+                        if (result == null)
                         {
                            groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.group );
                            groupMemberBuilder.prototype().id().set( dn );
                            result = groupMemberBuilder.newInstance();
                         }
-                     }catch( InvalidNameException ine )
+                     } catch (InvalidNameException ine)
                      {
-                        logger.debug("Unknown error while importing groups: ", ine);
-                        throw new ResourceException(Status.SERVER_ERROR_INTERNAL, ine);
+                        logger.debug( "Unknown error while importing groups: ", ine );
+                        throw new ResourceException( Status.SERVER_ERROR_INTERNAL, ine );
                      }
 
                      return result;
@@ -376,8 +382,9 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
                }, membersDN );
 
-               List<GroupMemberDetailValue> memberList = new ArrayList<GroupMemberDetailValue>(  );
-               CollectionUtils.addAll(memberList, memberIterable.iterator());
+
+               List<GroupMemberDetailValue> memberList = new ArrayList<GroupMemberDetailValue>();
+               CollectionUtils.addAll( memberList, memberIterable.iterator() );
 
                groupBuilder.prototype().members().set( memberList );
                groupsList.add( groupBuilder.newInstance() );
@@ -417,9 +424,15 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             {
                SearchResult searchResult = users.next();
                Attribute members = searchResult.getAttributes().get( vendorSpecifics.memberAttribute() );
-               for( int i=0; i<members.size(); i++ )
+               if (members != null)
                {
-                  userList.add( fetchUserDetails( (String)members.get( i ) ) );
+                  logger.error( "Seems attribute browsing is prohibited. Check user rights for user in config." );
+                  throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED );
+               }
+
+               for (int i = 0; i < members.size(); i++)
+               {
+                  userList.add( fetchUserDetails( (String) members.get( i ) ) );
                }
             }
 
