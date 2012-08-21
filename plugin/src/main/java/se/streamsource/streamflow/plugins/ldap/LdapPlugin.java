@@ -122,18 +122,25 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
          } catch (AuthenticationException ae)
          {
-            logger.warn("Could not log on ldap-server with service account");
-            throw new ResourceException( Status.SERVER_ERROR_INTERNAL, ae);
+            logger.warn("Could not log on ldap-server with service account", ae);
+            //throw new ResourceException( Status.SERVER_ERROR_INTERNAL, ae);
          } catch (NamingException e)
          {
             logger.warn("Problem establishing connection with ldap-server", e);
-            throw new ResourceException(Status.SERVER_ERROR_INTERNAL, e);
+            //throw new ResourceException(Status.SERVER_ERROR_INTERNAL, e);
          }
       }
 
       private void resetSecurityCredentials()
             throws NamingException
       {
+         // if contxt is null throw ResourceException
+         if(ctx == null)
+         {
+            logger.error( "Ldap Context is null. Probably server not available." );
+            throw new ResourceException( Status.SERVER_ERROR_INTERNAL, "Ldap Context is null. Probably server not available." );
+         }
+
          ctx.removeFromEnvironment( Context.SECURITY_PRINCIPAL );
          ctx.removeFromEnvironment( Context.SECURITY_CREDENTIALS );
          if(!config.configuration().username().get().isEmpty() )
@@ -355,22 +362,28 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
                      GroupMemberDetailValue result = null;
                      try
                      {
-                        LdapName ldapName = new LdapName( dn );
-                        for (Rdn rdn : ldapName.getRdns())
-                        {
-                           if (vendorSpecifics.uidAttribute().equals( rdn.getType() ))
-                           {
-                              groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.user );
-                              groupMemberBuilder.prototype().id().set( (String) rdn.getValue() );
-                              result = groupMemberBuilder.newInstance();
-                           }
-                        }
-                        if (result == null)
+                        if( dn.toLowerCase().endsWith( config.configuration().groupSearchbase().get().toLowerCase() ) )
                         {
                            groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.group );
                            groupMemberBuilder.prototype().id().set( dn );
                            result = groupMemberBuilder.newInstance();
+                        } else if( dn.toLowerCase().endsWith( config.configuration().userSearchbase().get().toLowerCase() ) )
+                        {
+                           LdapName ldapName = new LdapName( dn );
+                           for (Rdn rdn : ldapName.getRdns())
+                           {
+                              if (vendorSpecifics.uidAttribute().equals( rdn.getType() ))
+                              {
+                                 groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.user );
+                                 groupMemberBuilder.prototype().id().set( (String) rdn.getValue() );
+                                 result = groupMemberBuilder.newInstance();
+                              }
+                           }
+                        } else
+                        {
+                           logger.error( "Cannot determine member type!" + dn );
                         }
+
                      } catch (InvalidNameException ine)
                      {
                         logger.debug( "Unknown error while importing groups: ", ine );
@@ -424,7 +437,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             {
                SearchResult searchResult = users.next();
                Attribute members = searchResult.getAttributes().get( vendorSpecifics.memberAttribute() );
-               if (members != null)
+               if (members == null)
                {
                   logger.error( "Seems attribute browsing is prohibited. Check user rights for user in config." );
                   throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED );
@@ -554,7 +567,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
    {
       public String createFilterForUidQuery()
       {
-         return "(&(objectclass=person)(uid={0}))";
+         return "(&(objectclass=person)(cn={0}))";
       }
 
       public String createFilterForFetchUserWithDn()
@@ -575,7 +588,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
       public String uidAttribute()
       {
-         return "uid";
+         return "cn";
       }
 
       public String entryUUIDAttribute()
