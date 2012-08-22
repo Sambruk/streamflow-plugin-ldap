@@ -65,17 +65,12 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
       @This
       protected Configuration<LdapPluginConfiguration> config;
 
-      protected DirContext ctx;
-
       private VendorSpecifics vendorSpecifics;
+
+      private Hashtable<String, String> env;
 
       public void passivate() throws Exception
       {
-         if( ctx != null )
-         {
-            ctx.close();
-            ctx = null;
-         }
       }
 
       public void activate() throws Exception
@@ -83,7 +78,23 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          if ( !LdapPluginConfiguration.Vendor.not_configured.name()
                .equals(  config.configuration().vendor().get() ) && checkConfigOk() )
          {
-            createInitialContext();
+            env = new Hashtable<String, String>();
+            env.put( Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+            env.put(Context.PROVIDER_URL, config.configuration().url().get());
+            env.put(Context.SECURITY_AUTHENTICATION, "simple");
+            env.put("com.sun.jndi.ldap.connect.pool", "true");
+
+            if (!config.configuration().username().get().isEmpty())
+            {
+               env.put( Context.SECURITY_PRINCIPAL, config.configuration().username().get());
+               env.put(Context.SECURITY_CREDENTIALS, config.configuration().password().get());
+            }
+
+            // test connection and logg errors
+            DirContext ctx = createNewInitialContext();
+            if( ctx != null )
+               ctx.close();
+
             switch (LdapPluginConfiguration.Vendor.valueOf( config.configuration().vendor().get() ) )
             {
                case ad:
@@ -101,37 +112,27 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          }
       }
 
-      private void createInitialContext()
+      private DirContext createNewInitialContext()
       {
-         Hashtable<String, String> env = new Hashtable<String, String>();
-         env.put( Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-         env.put(Context.PROVIDER_URL, config.configuration().url().get());
-         env.put(Context.SECURITY_AUTHENTICATION, "simple");
-
-         if (!config.configuration().username().get().isEmpty())
-         {
-            env.put( Context.SECURITY_PRINCIPAL, config.configuration().username().get());
-            env.put(Context.SECURITY_CREDENTIALS, config.configuration().password().get());
-         }
+         DirContext resultCtx = null;
 
          try
          {
-            ctx = new InitialDirContext(env);
+            resultCtx = new InitialDirContext(env);
 
             logger.info( "Established connection with LDAP server at " + config.configuration().url().get() );
 
          } catch (AuthenticationException ae)
          {
             logger.warn("Could not log on ldap-server with service account", ae);
-            //throw new ResourceException( Status.SERVER_ERROR_INTERNAL, ae);
          } catch (NamingException e)
          {
             logger.warn("Problem establishing connection with ldap-server", e);
-            //throw new ResourceException(Status.SERVER_ERROR_INTERNAL, e);
          }
+         return resultCtx;
       }
 
-      private void resetSecurityCredentials()
+      private void resetSecurityCredentials( DirContext ctx )
             throws NamingException
       {
          // if contxt is null throw ResourceException
@@ -203,9 +204,10 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
       private UserDetailsValue lookupUserDetails( String uid, String password)
       {
+         DirContext ctx = createNewInitialContext();
          try
          {
-            resetSecurityCredentials();
+            resetSecurityCredentials( ctx );
 
             String filter = vendorSpecifics.createFilterForUidQuery();
 
@@ -241,17 +243,32 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             ctx.lookup(dn);
 
             logger.debug("Authentication successful for user: " + dn);
+            ctx.close();
 
             return userDetails;
 
          } catch (AuthenticationException ae)
          {
             logger.debug("User could not be authenticated:", ae);
+            try
+            {
+               ctx.close();
+            } catch (NamingException e)
+            {
+               // do nothing
+            }
             throw new ResourceException(Status.CLIENT_ERROR_UNAUTHORIZED, ae);
 
          } catch (NamingException e)
          {
             logger.debug("Unknown error while authenticating user: ", e);
+            try
+            {
+               ctx.close();
+            } catch (NamingException e1)
+            {
+               //do nothing
+            }
             throw new ResourceException(Status.SERVER_ERROR_INTERNAL, e);
          }
       }
@@ -315,7 +332,8 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
          ValueBuilder<GroupListValue> listBuilder = module.valueBuilderFactory().newValueBuilder( GroupListValue.class );
          try
          {
-            resetSecurityCredentials();
+            DirContext ctx = createNewInitialContext();
+            resetSecurityCredentials( ctx );
 
             SearchControls groupCtls = new SearchControls();
             groupCtls.setSearchScope( SearchControls.SUBTREE_SCOPE );
@@ -339,7 +357,8 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
                Attribute name = searchResult.getAttributes().get( config.configuration().nameAttribute().get() );
                if (name == null)
                {
-                  logger.error( "Seems attribute browsing is prohibited. Check user rights for user in config." );
+                  logger.error( "Seems attribute browsing is prohibited. Check user rights for user in config or attribute "
+                        + config.configuration().nameAttribute().get() + " has no value!" );
                   throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED );
                }
 
@@ -372,7 +391,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
                            LdapName ldapName = new LdapName( dn );
                            for (Rdn rdn : ldapName.getRdns())
                            {
-                              if (vendorSpecifics.uidAttribute().equals( rdn.getType() ))
+                              if (vendorSpecifics.uidAttribute().toLowerCase().equals( rdn.getType().toLowerCase() ))
                               {
                                  groupMemberBuilder.prototype().memberType().set( GroupMemberDetailValue.Type.user );
                                  groupMemberBuilder.prototype().id().set( (String) rdn.getValue() );
@@ -404,6 +423,7 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
             }
 
             listBuilder.prototype().groups().set( groupsList );
+            ctx.close();
 
          } catch (NamingException ne )
          {
@@ -420,47 +440,50 @@ public interface LdapPlugin extends ServiceComposite, Activatable, Authenticator
 
          try
          {
-            resetSecurityCredentials();
+            DirContext ctx = createNewInitialContext();
+            resetSecurityCredentials( ctx );
 
             String filter = vendorSpecifics.createFilterForGroupOfNames();
 
             SearchControls userCtls = new SearchControls();
-            userCtls.setSearchScope( SearchControls.OBJECT_SCOPE);
+            userCtls.setSearchScope( SearchControls.OBJECT_SCOPE );
 
             userCtls.setReturningAttributes( createReturnAttributesForGroupQuery() );
             userCtls.setReturningObjFlag( true );
             NamingEnumeration<SearchResult> users = ctx.search( config.configuration().streamflowUsersDn().get(), filter,
-                  new String[]{}, userCtls);
+                  new String[]{}, userCtls );
 
-            List<UserDetailsValue> userList = new ArrayList<UserDetailsValue>( );
-            while( users.hasMore() )
+            List<UserDetailsValue> userList = new ArrayList<UserDetailsValue>();
+            while (users.hasMore())
             {
                SearchResult searchResult = users.next();
                Attribute members = searchResult.getAttributes().get( vendorSpecifics.memberAttribute() );
                if (members == null)
                {
-                  logger.error( "Seems attribute browsing is prohibited. Check user rights for user in config." );
+                  logger.error( "Seems attribute browsing is prohibited. Check user rights for user in config or attribute "
+                        + vendorSpecifics.memberAttribute() + " has no value!" );
                   throw new ResourceException( Status.CLIENT_ERROR_UNAUTHORIZED );
                }
 
                for (int i = 0; i < members.size(); i++)
                {
-                  userList.add( fetchUserDetails( (String) members.get( i ) ) );
+                  userList.add( fetchUserDetails( ctx, (String) members.get( i ) ) );
                }
             }
 
-         listBuilder.prototype().users().set( userList );
+            listBuilder.prototype().users().set( userList );
+            ctx.close();
 
-      } catch (NamingException ne )
-      {
-         logger.debug("Unknown error while importing users: ", ne);
-         throw new ResourceException(Status.SERVER_ERROR_INTERNAL, ne);
+         } catch (NamingException ne)
+         {
+            logger.debug( "Unknown error while importing users: ", ne );
+            throw new ResourceException( Status.SERVER_ERROR_INTERNAL, ne );
+         }
+
+         return listBuilder.newInstance();
       }
 
-      return listBuilder.newInstance();
-      }
-
-      private UserDetailsValue fetchUserDetails( String dn )
+      private UserDetailsValue fetchUserDetails( DirContext ctx, String dn )
             throws NamingException
       {
 
