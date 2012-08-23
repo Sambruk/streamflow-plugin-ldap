@@ -1,3 +1,9 @@
+/**
+ *
+ * Copyright 2009-2012 Jayway Products AB
+ *
+ * License statement goes here
+ */
 package se.streamsource.streamflow.plugins.ldap;
 
 /**
