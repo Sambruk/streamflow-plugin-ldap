@@ -8,8 +8,8 @@
 
     <properties>
         <application.header>Streamflow</application.header>
-        <version.streamflow>1.8.0-SNAPSHOT</version.streamflow>
-        <version.qi4j-core>1.3</version.qi4j-core>
+        <version.streamflow>1.24</version.streamflow>
+        <version.qi4j-core>1.3-sf897</version.qi4j-core>
         <version.restlet>2.0.3</version.restlet>
         <version.slf4j>1.6.1</version.slf4j>
         <deploy.dir>${glassfish.domain}/autodeploy</deploy.dir>
@@ -146,8 +146,8 @@
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.5</source>
-                    <target>1.5</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
